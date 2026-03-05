@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "New Project Setup",
+  "description": "Provision a new client project with complete folder structure and credential file templates",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Execute the New Project Setup workflow:\n\n1. Ask via userInput: \"Do you want to create a new FSM testing project?\"\n2. If yes:\n   a. Run: python ReusableTools/new_project_setup.py\n   b. Tell the user: \"Please answer the questions in the terminal. The script will ask for client name, tenant ID, FSM credentials, and SFTP details.\"\n   c. Wait for the script to complete\n   d. After completion, show a summary via userInput with:\n      - Project name and location\n      - What was created (folders, credential files, README)\n      - Reminders: verify credentials, add .ionapi if needed, never commit credential files\n3. If no: Acknowledge and exit\n\nDo NOT ask for the information yourself - let the script handle all prompts interactively in the terminal."
+  }
+}

@@ -1,0 +1,44 @@
+# FSM Automated Testing Workspace - Python Dependencies
+# Install with: pip install -r requirements.txt
+#
+# IMPORTANT: This installs Python libraries only.
+# For complete setup, see SETUP.md for additional requirements:
+# - Tesseract-OCR (for image text extraction)
+# - Playwright (managed via MCP, no manual install needed)
+
+# Document Processing
+python-docx>=1.1.0          # Read/write .docx files
+PyPDF2>=3.0.0               # PDF reading and extraction
+pillow>=10.0.0              # Image processing (also used for GUI icon generation)
+pytesseract>=0.3.10         # OCR for image text extraction (requires Tesseract-OCR installed)
+
+# GUI (Test Scenario Builder)
+ttkbootstrap>=1.10.1        # Modern themed tkinter widgets (optional but recommended for GUI)
+# Note: tkinter is included with Python - no separate install needed
+
+# Data Analysis
+pandas>=2.0.0               # Data manipulation and analysis
+openpyxl>=3.1.0             # Excel file support
+
+# Web Automation
+# Note: Playwright is managed via MCP server in .kiro/settings/mcp.json
+# No pip installation needed - Kiro handles this automatically
+
+# SFTP Operations
+paramiko>=3.0.0             # SFTP client for file transfers
+
+# HTTP/API
+requests>=2.31.0            # HTTP requests for API calls
+urllib3>=2.0.0              # HTTP client
+
+# Utilities
+python-dotenv>=1.0.0        # Environment variable management
+pathlib>=1.0.1              # Path operations
+
+# Optional but recommended
+colorama>=0.4.6             # Colored terminal output (Windows)
+tqdm>=4.66.0                # Progress bars
+
+# Development/Testing (optional)
+pytest>=7.4.0               # Testing framework
+black>=23.0.0               # Code formatting

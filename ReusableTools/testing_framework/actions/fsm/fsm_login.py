@@ -1,0 +1,149 @@
+"""FSM login automation action using Python Playwright"""
+
+from typing import Dict, Any, Optional
+from ..base import BaseAction
+from ...engine.test_state import TestState
+from ...engine.results import ActionResult
+from ...integration.playwright_client import PlaywrightClient
+from ...utils.exceptions import ActionError
+from ...utils.logger import Logger
+
+
+class FSMLoginAction(BaseAction):
+    """
+    FSM login automation using Python Playwright.
+    
+    Handles:
+    - Navigation to FSM portal
+    - Authentication selection (Cloud Identities or Azure)
+    - Credential entry
+    - Login verification
+    """
+    
+    def __init__(
+        self,
+        playwright_client: PlaywrightClient,
+        logger: Optional[Logger] = None
+    ):
+        """
+        Initialize FSM login action.
+        
+        Args:
+            playwright_client: PlaywrightClient instance
+            logger: Optional logger instance
+        """
+        super().__init__(logger)
+        self.playwright = playwright_client
+    
+    def execute(self, config: Dict[str, Any], state: TestState) -> ActionResult:
+        """
+        Execute FSM login.
+        
+        Args:
+            config: Action configuration with:
+                - url: FSM portal URL
+                - username: FSM username
+                - password: FSM password
+                - auth_method: Authentication method (default: 'Cloud Identities')
+            state: TestState instance
+        
+        Returns:
+            ActionResult with login status
+        
+        Raises:
+            ActionError: If login fails
+        """
+        try:
+            # Extract configuration
+            url = config.get('url')
+            username = config.get('username')
+            password = config.get('password')
+            auth_method = config.get('auth_method', 'Cloud Identities')
+            
+            if not url or not username or not password:
+                raise ActionError("Missing required login credentials: url, username, password")
+            
+            if self.logger:
+                self.logger.info(f"Logging into FSM: {url}")
+            
+            # Step 1: Navigate to FSM portal
+            self.playwright.navigate(url)
+            self.playwright.wait_for_timeout(3000)
+            
+            # Step 2: Select authentication method
+            if self.logger:
+                self.logger.debug(f"Selecting authentication method: {auth_method}")
+            
+            # Click on the authentication method (Cloud Identities or Azure)
+            auth_selector = f'text="{auth_method}"'
+            self.playwright.wait_for_selector(auth_selector, timeout=10000)
+            self.playwright.click(auth_selector)
+            
+            # Step 3: Wait for login page to load
+            self.playwright.wait_for_timeout(2000)
+            
+            # Step 4: Enter email/username
+            if self.logger:
+                self.logger.info("Entering credentials")
+            
+            # Wait for email input field
+            email_selector = 'input[type="email"], input[name="loginfmt"], input[placeholder*="email" i]'
+            self.playwright.wait_for_selector(email_selector, timeout=10000)
+            self.playwright.fill(email_selector, username)
+            
+            # Click Next button
+            next_button = 'button:has-text("Next"), input[type="submit"][value="Next"]'
+            self.playwright.click(next_button)
+            
+            # Step 5: Enter password
+            self.playwright.wait_for_timeout(2000)
+            
+            # Wait for password input field
+            password_selector = 'input[type="password"], input[name="passwd"]'
+            self.playwright.wait_for_selector(password_selector, timeout=10000)
+            self.playwright.fill(password_selector, password)
+            
+            # Click Sign In button
+            signin_button = 'button:has-text("Sign in"), button:has-text("Sign In"), input[type="submit"][value="Sign in"]'
+            self.playwright.click(signin_button)
+            
+            # Step 6: Handle "Stay signed in?" prompt if it appears
+            self.playwright.wait_for_timeout(2000)
+            
+            try:
+                # Check if "Stay signed in?" prompt appears
+                stay_signed_in = 'button:has-text("Yes"), button:has-text("No")'
+                if self.playwright.is_visible(stay_signed_in):
+                    # Click "Yes" to stay signed in
+                    self.playwright.click('button:has-text("Yes")')
+                    if self.logger:
+                        self.logger.debug("Clicked 'Yes' on 'Stay signed in?' prompt")
+            except:
+                # Prompt didn't appear, continue
+                pass
+            
+            # Step 7: Wait for FSM portal to load
+            if self.logger:
+                self.logger.info("Waiting for FSM portal to load...")
+            
+            # Wait for Applications menu or FSM portal elements
+            portal_selector = 'text="Applications", [aria-label="Applications"], .portal-header'
+            self.playwright.wait_for_selector(portal_selector, timeout=60000)
+            
+            if self.logger:
+                self.logger.info("Login successful - FSM portal loaded")
+            
+            return ActionResult(
+                success=True,
+                message="FSM login successful",
+                data={"url": url, "username": username}
+            )
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"FSM login failed: {str(e)}")
+            
+            return ActionResult(
+                success=False,
+                message=f"FSM login failed: {str(e)}"
+            )
