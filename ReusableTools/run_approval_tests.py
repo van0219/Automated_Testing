@@ -92,6 +92,10 @@ def main():
     run_group = f"AUTOTEST_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     print(f'\n[3/6] Test run group: {run_group}')
     
+    # Create evidence directory
+    evidence_dir = Path('Projects') / args.client / 'Temp' / 'evidence' / 'test'
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    
     # Initialize Playwright
     print(f'\n[4/6] Starting browser...')
     headless = args.headless.lower() == 'true'
@@ -108,6 +112,11 @@ def main():
         
         # Wait for page load
         playwright_client.wait_for_timeout(3000)
+        
+        # Take initial screenshot
+        screenshot_path = evidence_dir / '01_login_page.png'
+        playwright_client.screenshot(str(screenshot_path))
+        print(f'  ✓ Screenshot saved: {screenshot_path}')
         
         # Check if login page loaded
         print(f'\n[6/6] Testing FSM login...')
@@ -149,4 +158,38 @@ def main():
             print(f'  ⚠ Login page not detected - may already be logged in')
         
         # Take screenshot
-      
+        evidence_dir = Path('Projects') / args.client / 'Temp' / 'evidence' / 'test'
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_path = evidence_dir / '01_login_page.png'
+        playwright_client.screenshot(str(screenshot_path))
+        print(f'  ✓ Screenshot saved: {screenshot_path}')
+        
+        print('\n' + '='*60)
+        print('INITIAL VALIDATION COMPLETE')
+        print('='*60)
+        print('\nNext steps:')
+        print('1. Implement FSM login automation')
+        print('2. Implement Payables navigation')
+        print('3. Implement invoice creation')
+        print('4. Implement approval submission')
+        print('5. Implement work unit monitoring')
+        print('6. Implement evidence collection')
+        print('7. Implement TES-070 generation')
+        
+        # Keep browser open for inspection
+        input('\nPress Enter to close browser...')
+        
+        return 0
+        
+    except Exception as e:
+        logger.error(f'Test execution failed: {str(e)}')
+        print(f'\nERROR: {str(e)}')
+        return 1
+        
+    finally:
+        playwright_client.close()
+        print('\n✓ Browser closed')
+
+
+if __name__ == '__main__':
+    sys.exit(main())

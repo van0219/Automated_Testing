@@ -120,7 +120,7 @@ class TestState:
         Interpolate state variables in string.
         
         Args:
-            text: String with {{state.variable_name}} placeholders
+            text: String with {{state.variable_name}} or {{VARIABLE_NAME}} placeholders
         
         Returns:
             String with interpolated values
@@ -128,15 +128,37 @@ class TestState:
         Raises:
             StateError: If referenced variable not found
         """
-        def replace_var(match):
+        def replace_state_var(match):
             var_name = match.group(1)
             if not self.has(var_name):
                 raise StateError(f"State variable not found: {var_name}")
             return str(self.get(var_name))
         
+        def replace_direct_var(match):
+            var_name = match.group(1)
+            # Map common placeholders to state variables
+            mapping = {
+                'FSM_PORTAL_URL': 'fsm_url',
+                'FSM_USERNAME': 'fsm_username',
+                'FSM_PASSWORD': 'password',
+                'TODAY_YYYYMMDD': 'today_yyyymmdd',
+                'TODAY_PLUS_7_YYYYMMDD': 'today_plus_7_yyyymmdd'
+            }
+            
+            state_var = mapping.get(var_name, var_name.lower())
+            if not self.has(state_var):
+                raise StateError(f"Variable not found: {var_name} (mapped to state.{state_var})")
+            return str(self.get(state_var))
+        
         # Match {{state.variable_name}}
-        pattern = r'\{\{state\.([a-zA-Z_][a-zA-Z0-9_]*)\}\}'
-        return re.sub(pattern, replace_var, text)
+        pattern1 = r'\{\{state\.([a-zA-Z_][a-zA-Z0-9_]*)\}\}'
+        text = re.sub(pattern1, replace_state_var, text)
+        
+        # Match {{VARIABLE_NAME}} (direct placeholders)
+        pattern2 = r'\{\{([A-Z_][A-Z0-9_]*)\}\}'
+        text = re.sub(pattern2, replace_direct_var, text)
+        
+        return text
     
     def get_all(self) -> Dict[str, Any]:
         """

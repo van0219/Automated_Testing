@@ -3,7 +3,7 @@
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
-from ..integration.playwright_client import PlaywrightMCPClient
+from ..integration.playwright_client import PlaywrightClient
 from ..utils.logger import Logger
 
 
@@ -15,7 +15,7 @@ class ScreenshotManager:
     for TES-070 document generation.
     """
     
-    def __init__(self, playwright_client: PlaywrightMCPClient, output_dir: str = "", logger: Optional[Logger] = None):
+    def __init__(self, playwright_client: PlaywrightClient, output_dir: str = "", logger: Optional[Logger] = None):
         """
         Initialize screenshot manager.
         

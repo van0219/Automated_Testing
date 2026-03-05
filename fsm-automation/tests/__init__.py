@@ -1,0 +1,1 @@
+"""FSM automated tests"""

@@ -79,21 +79,40 @@ class FSMLoginAction(BaseAction):
             self.playwright.wait_for_selector(auth_selector, timeout=10000)
             self.playwright.click(auth_selector)
             
-            # Step 3: Wait for login page to load
-            self.playwright.wait_for_timeout(2000)
+            # Step 3: Wait for login page to load (may redirect)
+            self.playwright.wait_for_load_state('networkidle', timeout=30000)
+            self.playwright.wait_for_timeout(3000)
             
             # Step 4: Enter email/username
             if self.logger:
                 self.logger.info("Entering credentials")
             
-            # Wait for email input field
-            email_selector = 'input[type="email"], input[name="loginfmt"], input[placeholder*="email" i]'
-            self.playwright.wait_for_selector(email_selector, timeout=10000)
+            # Wait for email input field (increased timeout for redirect)
+            email_selector = 'input[type="email"], input[name="loginfmt"], input[name="username"], input[id="i0116"]'
+            self.playwright.wait_for_selector(email_selector, timeout=30000)
             self.playwright.fill(email_selector, username)
             
-            # Click Next button
-            next_button = 'button:has-text("Next"), input[type="submit"][value="Next"]'
-            self.playwright.click(next_button)
+            # Click Next button (try multiple selectors)
+            next_selectors = [
+                'input[type="submit"]',
+                'button[type="submit"]',
+                'input[value="Next"]',
+                '#idSIButton9',  # Microsoft login Next button ID
+                'button:has-text("Next")'
+            ]
+            
+            next_clicked = False
+            for selector in next_selectors:
+                try:
+                    if self.playwright.is_visible(selector):
+                        self.playwright.click(selector, timeout=5000)
+                        next_clicked = True
+                        break
+                except:
+                    continue
+            
+            if not next_clicked:
+                raise ActionError("Next button not found after entering email")
             
             # Step 5: Enter password
             self.playwright.wait_for_timeout(2000)
@@ -126,9 +145,39 @@ class FSMLoginAction(BaseAction):
             if self.logger:
                 self.logger.info("Waiting for FSM portal to load...")
             
-            # Wait for Applications menu or FSM portal elements
-            portal_selector = 'text="Applications", [aria-label="Applications"], .portal-header'
-            self.playwright.wait_for_selector(portal_selector, timeout=60000)
+            # Wait for portal - try multiple selectors
+            portal_selectors = [
+                'text="Applications"',
+                '[aria-label="Applications"]',
+                '.portal-header',
+                '#homePage',
+                '.home-page',
+                'text="Infor OS Portal"'
+            ]
+            
+            portal_loaded = False
+            for selector in portal_selectors:
+                try:
+                    self.playwright.wait_for_selector(selector, timeout=10000)
+                    portal_loaded = True
+                    if self.logger:
+                        self.logger.info(f"Portal loaded - found selector: {selector}")
+                    break
+                except:
+                    continue
+            
+            if not portal_loaded:
+                # Portal might have loaded but with different elements
+                # Check if we're no longer on login page
+                self.playwright.wait_for_timeout(5000)
+                current_url = self.playwright.page.url
+                if 'login' not in current_url.lower() and 'auth' not in current_url.lower():
+                    portal_loaded = True
+                    if self.logger:
+                        self.logger.info(f"Portal loaded - URL changed to: {current_url}")
+            
+            if not portal_loaded:
+                raise ActionError("FSM portal did not load after login")
             
             if self.logger:
                 self.logger.info("Login successful - FSM portal loaded")

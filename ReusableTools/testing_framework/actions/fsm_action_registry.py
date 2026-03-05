@@ -5,7 +5,7 @@ from .fsm.fsm_login import FSMLoginAction
 from .fsm.fsm_payables import FSMPayablesAction
 from .fsm.fsm_workunits import FSMWorkUnitsAction
 from ..engine.step_engine import StepEngine
-from ..integration.playwright_client import PlaywrightMCPClient
+from ..integration.playwright_client import PlaywrightClient
 from ..integration.ui_map_loader import UIMapLoader
 from ..evidence.screenshot_manager import ScreenshotManager
 from ..utils.logger import Logger
@@ -13,7 +13,7 @@ from ..utils.logger import Logger
 
 def register_fsm_actions(
     step_engine: StepEngine,
-    playwright_client: PlaywrightMCPClient,
+    playwright_client: PlaywrightClient,
     ui_map_loader: UIMapLoader,
     screenshot_manager: ScreenshotManager,
     logger: Optional[Logger] = None
@@ -26,7 +26,7 @@ def register_fsm_actions(
     
     Args:
         step_engine: StepEngine instance to register actions with
-        playwright_client: PlaywrightMCPClient instance for browser automation
+        playwright_client: PlaywrightClient instance for browser automation
         ui_map_loader: UIMapLoader instance for UI element discovery
         screenshot_manager: ScreenshotManager instance for evidence capture
         logger: Optional logger instance
@@ -76,15 +76,11 @@ def register_fsm_actions(
     
     fsm_payables = FSMPayablesAction(
         playwright_client=playwright_client,
-        ui_map_loader=ui_map_loader,
-        screenshot_manager=screenshot_manager,
         logger=logger
     )
     
     fsm_workunits = FSMWorkUnitsAction(
         playwright_client=playwright_client,
-        ui_map_loader=ui_map_loader,
-        screenshot_manager=screenshot_manager,
         logger=logger
     )
     
@@ -99,7 +95,7 @@ def register_fsm_actions(
 
 
 def create_fsm_action_handlers(
-    playwright_client: PlaywrightMCPClient,
+    playwright_client: PlaywrightClient,
     ui_map_loader: UIMapLoader,
     screenshot_manager: ScreenshotManager,
     logger: Optional[Logger] = None
@@ -110,7 +106,7 @@ def create_fsm_action_handlers(
     Useful for manual action execution or testing.
     
     Args:
-        playwright_client: PlaywrightMCPClient instance
+        playwright_client: PlaywrightClient instance
         ui_map_loader: UIMapLoader instance
         screenshot_manager: ScreenshotManager instance
         logger: Optional logger instance
@@ -125,14 +121,10 @@ def create_fsm_action_handlers(
         ),
         'fsm_payables': FSMPayablesAction(
             playwright_client=playwright_client,
-            ui_map_loader=ui_map_loader,
-            screenshot_manager=screenshot_manager,
             logger=logger
         ),
         'fsm_workunits': FSMWorkUnitsAction(
             playwright_client=playwright_client,
-            ui_map_loader=ui_map_loader,
-            screenshot_manager=screenshot_manager,
             logger=logger
         )
     }

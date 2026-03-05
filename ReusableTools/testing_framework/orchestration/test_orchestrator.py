@@ -10,7 +10,7 @@ from ..engine.results import TestResult
 from ..integration.credential_manager import CredentialManager
 from ..integration.sftp_client import SFTPClient
 from ..integration.fsm_api_client import FSMAPIClient
-from ..integration.playwright_client import PlaywrightMCPClient
+from ..integration.playwright_client import PlaywrightClient
 from ..integration.workunit_monitor import WorkUnitMonitor
 from ..evidence.screenshot_manager import ScreenshotManager
 from ..evidence.tes070_generator import TES070Generator
@@ -40,7 +40,8 @@ class TestOrchestrator:
         self,
         client_name: str,
         environment: str,
-        logger: Logger
+        logger: Logger,
+        headless: bool = False
     ):
         """
         Initialize test orchestrator.
@@ -49,10 +50,12 @@ class TestOrchestrator:
             client_name: Client name for credential loading
             environment: FSM environment (e.g., 'ACUITY_TST')
             logger: Logger instance
+            headless: Run browser in headless mode (default: False for visibility)
         """
         self.client_name = client_name
         self.environment = environment
         self.logger = logger
+        self.headless = headless
         
         # Initialize credentials
         credentials_dir = Path("Projects") / client_name / "Credentials"
@@ -98,8 +101,8 @@ class TestOrchestrator:
             self.logger.warning(f"FSM API client not available: {str(e)}")
             self.fsm_api_client = None
         
-        # Playwright MCP Client
-        self.playwright_client = PlaywrightMCPClient(self.logger)
+        # Playwright Client
+        self.playwright_client = PlaywrightClient(self.logger, headless=self.headless, screen=2)
         self.playwright_client.connect()
         
         # WorkUnit Monitor
@@ -172,6 +175,26 @@ class TestOrchestrator:
         """
         self.logger.info(f"Loading test scenario: {scenario_file}")
         
+        # Load FSM credentials into state for interpolation
+        try:
+            fsm_creds = self.credential_manager.get_fsm_credentials(self.environment)
+            self.state.set('fsm_url', fsm_creds['url'])
+            self.state.set('fsm_username', fsm_creds['username'])
+            self.state.set('password', fsm_creds['password'])
+            self.logger.info(f"FSM credentials loaded into state for {self.environment}")
+        except Exception as e:
+            self.logger.error(f"Failed to load FSM credentials: {str(e)}")
+            raise ConfigurationError(f"Failed to load FSM credentials: {str(e)}")
+        
+        # Initialize date variables for test execution
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        today_plus_7 = today + timedelta(days=7)
+        
+        self.state.set('today_yyyymmdd', today.strftime('%Y%m%d'))
+        self.state.set('today_plus_7_yyyymmdd', today_plus_7.strftime('%Y%m%d'))
+        self.logger.info(f"Date variables initialized: today={today.strftime('%Y%m%d')}, today+7={today_plus_7.strftime('%Y%m%d')}")
+        
         # Load JSON
         try:
             with open(scenario_file, 'r') as f:
@@ -180,7 +203,8 @@ class TestOrchestrator:
             raise ConfigurationError(f"Failed to load scenario file: {str(e)}")
         
         # Extract metadata
-        interface_id = test_data.get('interface_id', 'Unknown')
+        # Support both 'interface_id' (for interfaces) and 'extension_id' (for approvals)
+        interface_id = test_data.get('interface_id') or test_data.get('extension_id', 'Unknown')
         interface_type = test_data.get('interface_type', 'inbound')
         scenarios = test_data.get('scenarios', [])
         
@@ -201,8 +225,17 @@ class TestOrchestrator:
         scenario_results = []
         all_passed = True
         
-        for scenario in scenarios:
-            self.logger.info(f"Executing scenario: {scenario.get('scenario_id')}")
+        print(f"\n📋 Executing {len(scenarios)} scenario(s)...")
+        
+        for idx, scenario in enumerate(scenarios, 1):
+            scenario_id = scenario.get('scenario_id', 'Unknown')
+            scenario_title = scenario.get('title', 'Untitled')
+            
+            print(f"\n{'='*80}")
+            print(f"SCENARIO {idx}/{len(scenarios)}: {scenario_id} - {scenario_title}")
+            print(f"{'='*80}")
+            
+            self.logger.info(f"Executing scenario: {scenario_id}")
             
             try:
                 result = executor.execute_scenario(scenario)
@@ -210,8 +243,12 @@ class TestOrchestrator:
                 
                 if not result.passed:
                     all_passed = False
+                    print(f"\n❌ Scenario {scenario_id} FAILED")
+                else:
+                    print(f"\n✅ Scenario {scenario_id} PASSED")
                     
             except Exception as e:
+                print(f"\n❌ Scenario {scenario_id} ERROR: {str(e)}")
                 self.logger.error(f"Scenario execution failed: {str(e)}")
                 all_passed = False
         

@@ -3,7 +3,7 @@
 import time
 from datetime import datetime
 from typing import Dict, Any, Optional
-from .playwright_client import PlaywrightMCPClient
+from .playwright_client import PlaywrightClient
 from ..utils.exceptions import TimeoutError as FrameworkTimeoutError, WorkUnitError
 from ..utils.logger import Logger
 
@@ -16,7 +16,7 @@ class WorkUnitMonitor:
     Implements adaptive polling: 0-2min=10s, 2-5min=30s, 5+min=60s
     """
     
-    def __init__(self, playwright_client: PlaywrightMCPClient, logger: Optional[Logger] = None):
+    def __init__(self, playwright_client: PlaywrightClient, logger: Optional[Logger] = None):
         """
         Initialize work unit monitor.
         

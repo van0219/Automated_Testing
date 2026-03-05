@@ -91,14 +91,43 @@ See [WORKSPACE_STRUCTURE.md](WORKSPACE_STRUCTURE.md) for complete details.
 - **Data Validation**: Compass SQL queries for verification
 
 ### Key Capabilities
-- ✅ Browser automation via Playwright
+- ✅ Browser automation via Python Playwright (standalone execution)
 - ✅ TES-070 document generation and analysis
-- ✅ FSM UI navigation and testing
+- ✅ FSM UI navigation and testing with CSS selectors
 - ✅ Work unit monitoring and validation
 - ✅ Screenshot capture and embedding
 - ✅ Data Fabric API integration
+- ✅ **NEW (March 2026)**: Redesigned framework using standard Python Playwright
+- ✅ **NEW**: Visible browser automation on 2nd screen
+- ✅ **NEW**: Headless mode for CI/CD pipelines
 
 ## 🛠️ Key Tools
+
+### Automated Testing Framework (Redesigned March 2026)
+
+**NEW**: Framework now uses standard Python Playwright for standalone execution!
+
+Run tests independently:
+```bash
+python ReusableTools/run_approval_tests_v2.py --client SONH --scenario Projects/SONH/TestScripts/approval/test.json --environment ACUITY_TST
+```
+
+Or use the validation test:
+```bash
+python test_redesign.py
+```
+
+**Key Features**:
+- ✅ Standalone execution (no Kiro dependency)
+- ✅ Standard Python Playwright (no MCP tools)
+- ✅ CSS selector-based navigation
+- ✅ Multi-selector fallback for reliability
+- ✅ Visible browser on 2nd screen (or headless for CI/CD)
+- ✅ Adaptive polling for work unit monitoring
+- ✅ Automatic evidence collection
+- ✅ Automatic TES-070 generation
+
+See [REDESIGN_COMPLETE.md](REDESIGN_COMPLETE.md) and [DEMO_READY_SUMMARY.md](DEMO_READY_SUMMARY.md) for details.
 
 ### 5-Step Workflow (Recommended)
 The easiest way to create TES-070 documents:

@@ -147,7 +147,7 @@ class StepEngine:
                 step_number=step_number,
                 description=description,
                 action_result=ActionResult(
-                    status="failure",
+                    success=False,
                     message=f"Step execution failed: {str(e)}"
                 ),
                 validation_result=None,

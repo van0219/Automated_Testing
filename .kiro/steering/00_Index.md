@@ -441,13 +441,14 @@ Load on-demand using discloseContext tool when needed:
 **Location**: `ReusableTools/testing_framework/`
 
 **Purpose**: Automates FSM interface testing with evidence collection and TES-070 generation.
-Solves token consumption by automating all test steps programmatically.
+Provides real-time progress reporting so you can see exactly what's happening during test execution.
 
 **Key Features**:
 
 - State management with `{{state.variable}}` interpolation
 - Pluggable actions and validators
 - Adaptive polling for work unit monitoring (10s → 30s → 60s)
+- Real-time progress reporting (no more "stuck" feeling)
 - Automatic screenshot capture
 - Professional TES-070 Word document generation
 - OAuth2 token management with auto-refresh
@@ -456,40 +457,70 @@ Solves token consumption by automating all test steps programmatically.
 **Architecture**:
 
 - Engine: TestState, StepEngine, ValidatorEngine
-- Integration: PlaywrightMCPClient, SFTPClient, FSMAPIClient, WorkUnitMonitor, CredentialManager
+- Integration: PlaywrightClient (Python Playwright), SFTPClient, FSMAPIClient, WorkUnitMonitor, CredentialManager
 - Actions: fsm_login, fsm_payables, fsm_workunits, sftp_upload, wait, api_call
 - Validators: file, workunit, api
 - Orchestration: TestOrchestrator, ApprovalExecutor, InboundExecutor
 - Evidence: ScreenshotManager, TES070Generator
 
-**Execution Context** (CRITICAL):
+**Execution Methods**:
 
-- Framework MUST run in Kiro's execution context
-- Playwright MCP tools only available when Kiro executes code
-- Cannot run as subprocess: `python run_tests.py` will fail
-- Kiro loads and executes framework code directly
+1. **Via Hook** (Recommended - User-Friendly):
+   - Click "Approval Step 2: Execute Approval Tests" hook
+   - Select client and scenario file interactively
+   - Enter FSM credentials when prompted
+   - Watch real-time progress in console
+   - Browser opens on 2nd screen (visible automation)
 
-**Usage Pattern**:
+2. **Command Line** (Direct):
+   ```bash
+   python ReusableTools/run_approval_tests_v2.py --client ClientName --scenario path/to/scenario.json --environment ENV --url "FSM_URL" --username "USERNAME" --password "PASSWORD"
+   ```
 
-```python
-import sys
-sys.path.insert(0, 'ReusableTools')
-from testing_framework.orchestration.test_orchestrator import TestOrchestrator
-from testing_framework.utils.logger import Logger
+3. **Interactive Wrapper** (Prompts for credentials):
+   ```bash
+   python execute_approval_tests.py
+   ```
 
-logger = Logger('test', verbose=True)
-orchestrator = TestOrchestrator(
-    client_name='ClientName',
-    environment='ACUITY_TST',
-    logger=logger
-)
-try:
-    result = orchestrator.run('Projects/ClientName/TestScripts/approval/test.json')
-    print(f'Status: {"PASSED" if result.passed else "FAILED"}')
-    print(f'TES-070: {result.tes070_path}')
-finally:
-    orchestrator.cleanup()
+**Real-Time Progress Reporting** (NEW):
+
+The framework now shows exactly what's happening as tests execute:
+
 ```
+================================================================================
+SCENARIO 1/3: 3.1 - Valid Invoice Approval
+================================================================================
+
+  ⏳ Step 1.1: Login to FSM
+     ✅ PASSED
+
+  ⏳ Step 1.2: Navigate to Payables
+     ✅ PASSED
+
+  ⏳ Step 1.3: Create Invoice
+     ❌ FAILED: Element not found
+     ⚠️  Critical step failed - stopping scenario execution
+
+❌ Scenario 3.1 FAILED
+```
+
+**Benefits**:
+- See current scenario and step being executed
+- Immediate pass/fail feedback (✅/❌)
+- Error messages shown immediately with context
+- Know when tests are complete
+- No more wondering if it's stuck
+
+**Framework Redesign (March 2026)**:
+
+- ✅ Migrated from Playwright MCP to standard Python Playwright
+- ✅ Standalone execution (no Kiro dependency)
+- ✅ CSS selector-based navigation (no accessibility snapshots)
+- ✅ Multi-selector fallback strategy for reliability
+- ✅ Visible browser automation on 2nd screen
+- ✅ Headless mode for CI/CD pipelines
+- ✅ All FSM actions rewritten (fsm_login, fsm_payables, fsm_workunits)
+- ✅ Real-time progress reporting to console
 
 **State Variable Interpolation**:
 
@@ -498,6 +529,16 @@ finally:
 - `{{state.work_unit_id}}` - Work unit ID from wait actions
 - `{{state.uploaded_file}}` - Last uploaded filename
 - `{{state.api_record_count}}` - Record count from API calls
+- `{{TODAY_YYYYMMDD}}` - Current date (YYYYMMDD format)
+- `{{TODAY_PLUS_7_YYYYMMDD}}` - Current date + 7 days
+- `{{FSM_PORTAL_URL}}` - Mapped to `{{state.fsm_url}}`
+- `{{FSM_USERNAME}}` - Mapped to `{{state.fsm_username}}`
+
+**JSON Compatibility**:
+
+Framework accepts both field names for flexibility:
+- `interface_id` (for interface testing - INT_XXX)
+- `extension_id` (for approval testing - EXT_XXX)
 
 **Benefits**:
 
@@ -506,6 +547,7 @@ finally:
 - Consistency: 100% consistent logic every time
 - Evidence: Automatic capture with proper naming
 - TES-070: Automatic generation
+- Visibility: Real-time progress reporting
 
 **Security**:
 
@@ -574,23 +616,46 @@ TES-070 documents
 **Workflow**:
 
 1. **Approval Step 1**: Parse existing TES-070 → Generate JSON scenarios
-2. **Approval Step 2**: Execute approval tests → Framework runs automatically,
-   generates TES-070
+   - Input: Existing TES-070 document from `Projects/{Client}/TES-070/Approval_TES070s_For_Regression_Testing/`
+   - Output: `Projects/{Client}/TestScripts/approval/{EXT_ID}_auto_approval_test.json`
+   - Uses `extension_id` field (not `interface_id`)
+
+2. **Approval Step 2**: Execute approval tests → Framework runs with real-time progress
+   - Select client and scenario file interactively
+   - Enter FSM credentials (URL, username, password)
+   - Watch real-time progress in console:
+     ```
+     SCENARIO 1/3: 3.1 - Valid Invoice Approval
+       ⏳ Step 1.1: Login to FSM
+          ✅ PASSED
+       ⏳ Step 1.2: Navigate to Payables
+          ✅ PASSED
+     ```
+   - Browser opens on 2nd screen (visible automation)
+   - TES-070 generated automatically
+   - Output: `Projects/{Client}/TES-070/Generated_TES070s/TES-070_{timestamp}_{EXT_ID}.docx`
+
 3. **Approval Step 3**: Review TES-070 → Document already generated
+   - Locate generated TES-070 document
+   - Verify evidence and screenshots
+   - Open in Microsoft Word, press F9 to update TOC
+   - Finalize and deliver
 
 **Key Characteristics**:
 
 - Starts with EXISTING TES-070 document (regression testing)
 - Tests ENHANCEMENTS (approval workflows, IPA + LPL)
-- Interface IDs start with "EXT_" (e.g., EXT_FIN_004)
+- Extension IDs start with "EXT_" (e.g., EXT_FIN_004)
 - No test data generation needed (uses live FSM data)
 - No GUI tool - direct JSON generation from TES-070 analysis
 - Framework generates TES-070 automatically in Step 2
+- Real-time progress reporting (no more "stuck" feeling)
+- Immediate pass/fail feedback for each step
 
 **File Locations**:
 
 - Input: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*.docx`
-- Scenarios: `Projects/{ClientName}/TestScripts/approval/{interface_id}_auto_approval_test.json`
+- Scenarios: `Projects/{ClientName}/TestScripts/approval/{extension_id}_auto_approval_test.json`
 - Output: `Projects/{ClientName}/TES-070/Generated_TES070s/`
 
 ---
