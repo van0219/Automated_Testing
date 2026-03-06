@@ -63,8 +63,8 @@ def main():
     try:
         # Execute tests
         print('\n[2/3] Executing test scenarios...')
-        print('⏳ Test execution in progress - watch the browser window for activity')
-        print('   (If browser appears stuck, check the console for detailed logs)')
+        print('[*] Test execution in progress - watch the browser window for activity')
+        print('    (If browser appears stuck, check the console for detailed logs)')
         
         result = orchestrator.run(str(scenario_path))
         
@@ -74,13 +74,13 @@ def main():
         print('TEST RESULTS')
         print('='*80)
         print(f'\nExtension: {result.interface_id}')
-        print(f'Status: {"✅ PASSED" if result.passed else "❌ FAILED"}')
+        print(f'Status: {"[PASSED]" if result.passed else "[FAILED]"}')
         print(f'Scenarios Executed: {len(result.scenario_results)}')
         
         # Show per-scenario results
         print('\nScenario Results:')
         for scenario_result in result.scenario_results:
-            status_icon = '✅' if scenario_result.passed else '❌'
+            status_icon = '[PASS]' if scenario_result.passed else '[FAIL]'
             print(f'  {status_icon} Scenario {scenario_result.scenario_id}: {scenario_result.title}')
             
             # Show step details if scenario failed
@@ -93,7 +93,7 @@ def main():
         
         # Show TES-070 path if generated
         if hasattr(result, 'tes070_path') and result.tes070_path:
-            print(f'\n📄 TES-070 Document: {result.tes070_path}')
+            print(f'\n[TES-070] Document: {result.tes070_path}')
             print('   Open in Microsoft Word and press F9 to update Table of Contents')
         
         print('\n' + '='*80)
@@ -102,7 +102,7 @@ def main():
         
     except Exception as e:
         logger.error(f'Test execution failed: {str(e)}')
-        print(f'\n❌ ERROR: {str(e)}')
+        print(f'\n[ERROR] {str(e)}')
         import traceback
         traceback.print_exc()
         return 1
@@ -110,7 +110,7 @@ def main():
     finally:
         print('\nCleaning up...')
         orchestrator.cleanup()
-        print('✓ Cleanup complete')
+        print('[OK] Cleanup complete')
 
 
 if __name__ == '__main__':

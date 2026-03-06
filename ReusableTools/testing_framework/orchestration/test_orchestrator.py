@@ -76,15 +76,20 @@ class TestOrchestrator:
     
     def _init_integration_clients(self) -> None:
         """Initialize integration clients."""
-        # SFTP Client
-        sftp_creds = self.credential_manager.get_sftp_credentials()
-        self.sftp_client = SFTPClient(
-            host=sftp_creds['host'],
-            username=sftp_creds['username'],
-            password=sftp_creds['password'],
-            logger=self.logger
-        )
-        self.sftp_client.connect()
+        # SFTP Client (optional - only needed for file-based tests)
+        try:
+            sftp_creds = self.credential_manager.get_sftp_credentials()
+            self.sftp_client = SFTPClient(
+                host=sftp_creds['host'],
+                username=sftp_creds['username'],
+                password=sftp_creds['password'],
+                logger=self.logger
+            )
+            self.sftp_client.connect()
+            self.logger.info("SFTP client initialized")
+        except Exception as e:
+            self.logger.warning(f"SFTP client not available: {str(e)}")
+            self.sftp_client = None
         
         # FSM API Client (optional - only needed for API-based tests)
         try:
@@ -197,7 +202,7 @@ class TestOrchestrator:
         
         # Load JSON
         try:
-            with open(scenario_file, 'r') as f:
+            with open(scenario_file, 'r', encoding='utf-8') as f:
                 test_data = json.load(f)
         except Exception as e:
             raise ConfigurationError(f"Failed to load scenario file: {str(e)}")
@@ -225,7 +230,7 @@ class TestOrchestrator:
         scenario_results = []
         all_passed = True
         
-        print(f"\n📋 Executing {len(scenarios)} scenario(s)...")
+        print(f"\n[SCENARIOS] Executing {len(scenarios)} scenario(s)...")
         
         for idx, scenario in enumerate(scenarios, 1):
             scenario_id = scenario.get('scenario_id', 'Unknown')
@@ -243,12 +248,12 @@ class TestOrchestrator:
                 
                 if not result.passed:
                     all_passed = False
-                    print(f"\n❌ Scenario {scenario_id} FAILED")
+                    print(f"\n[FAIL] Scenario {scenario_id} FAILED")
                 else:
-                    print(f"\n✅ Scenario {scenario_id} PASSED")
+                    print(f"\n[PASS] Scenario {scenario_id} PASSED")
                     
             except Exception as e:
-                print(f"\n❌ Scenario {scenario_id} ERROR: {str(e)}")
+                print(f"\n[ERROR] Scenario {scenario_id} ERROR: {str(e)}")
                 self.logger.error(f"Scenario execution failed: {str(e)}")
                 all_passed = False
         

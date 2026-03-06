@@ -72,7 +72,7 @@ class ApprovalExecutor:
             expected_result = step_config.get('expected_result', '')
             
             # Print progress to console for user visibility
-            print(f"\n  ⏳ Step {step_number}: {description}")
+            print(f"\n  [*] Step {step_number}: {description}")
             self.logger.info(f"Step {step_number}: {description}")
             
             try:
@@ -93,7 +93,7 @@ class ApprovalExecutor:
                 if not step_result.passed:
                     all_passed = False
                     error_msg = step_result.error if hasattr(step_result, 'error') else 'Unknown error'
-                    print(f"     ❌ FAILED: {error_msg}")
+                    print(f"     [FAIL] {error_msg}")
                     self.logger.error(f"Step {step_number} failed: {error_msg}")
                     
                     # Check if this is a critical step that should stop execution
@@ -106,11 +106,11 @@ class ApprovalExecutor:
                         break  # Stop executing remaining steps
                     # Otherwise continue to next step
                 else:
-                    print(f"     ✅ PASSED")
+                    print(f"     [PASS]")
                     self.logger.info(f"Step {step_number} passed")
                 
             except Exception as e:
-                print(f"     ❌ ERROR: {str(e)}")
+                print(f"     [ERROR] {str(e)}")
                 self.logger.error(f"Step {step_number} error: {str(e)}")
                 
                 step_result = StepResult(

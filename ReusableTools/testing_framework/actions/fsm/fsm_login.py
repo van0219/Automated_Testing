@@ -70,18 +70,70 @@ class FSMLoginAction(BaseAction):
             self.playwright.navigate(url)
             self.playwright.wait_for_timeout(3000)
             
+            # Check if already logged in (look for FSM portal indicators)
+            try:
+                # Check for common FSM portal elements
+                fsm_indicators = [
+                    'text="Financials & Supply Management"',
+                    'text="Applications"',
+                    '[aria-label="Applications"]',
+                    '.portal-header',
+                    'text="Infor OS Portal"'
+                ]
+                
+                for indicator in fsm_indicators:
+                    try:
+                        if self.playwright.is_visible(indicator, timeout=2000):
+                            if self.logger:
+                                self.logger.info("Already logged in - FSM portal detected")
+                            return ActionResult(
+                                success=True,
+                                message="Already logged in - FSM portal detected",
+                                data={"url": url, "username": username}
+                            )
+                    except:
+                        continue
+            except:
+                pass
+            
             # Step 2: Select authentication method
             if self.logger:
                 self.logger.debug(f"Selecting authentication method: {auth_method}")
             
-            # Click on the authentication method (Cloud Identities or Azure)
-            auth_selector = f'text="{auth_method}"'
-            self.playwright.wait_for_selector(auth_selector, timeout=10000)
-            self.playwright.click(auth_selector)
-            
-            # Step 3: Wait for login page to load (may redirect)
-            self.playwright.wait_for_load_state('networkidle', timeout=30000)
-            self.playwright.wait_for_timeout(3000)
+            # Check if authentication selection page is present
+            try:
+                # Try multiple selectors for authentication method
+                auth_selectors = [
+                    f'text="{auth_method}"',
+                    f'a:has-text("{auth_method}")',
+                    f'button:has-text("{auth_method}")',
+                    f'[aria-label="{auth_method}"]'
+                ]
+                
+                auth_clicked = False
+                for selector in auth_selectors:
+                    try:
+                        self.playwright.wait_for_selector(selector, timeout=5000)
+                        self.playwright.click(selector)
+                        auth_clicked = True
+                        if self.logger:
+                            self.logger.debug(f"Authentication method clicked using: {selector}")
+                        break
+                    except:
+                        continue
+                
+                if auth_clicked:
+                    # Step 3: Wait for login page to load (may redirect)
+                    self.playwright.wait_for_load_state('networkidle', timeout=30000)
+                    self.playwright.wait_for_timeout(3000)
+                else:
+                    # Authentication selection not found, might already be on login page
+                    if self.logger:
+                        self.logger.debug("Authentication selection not found, assuming already on login page")
+            except:
+                # Authentication selection page not present, continue to login
+                if self.logger:
+                    self.logger.debug("No authentication selection page, continuing to login")
             
             # Step 4: Enter email/username
             if self.logger:

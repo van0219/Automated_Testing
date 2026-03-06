@@ -119,7 +119,7 @@ class StepEngine:
                 validation_result = self.validator_engine.validate(validation_config)
             
             # 8. Build and return StepResult
-            passed = action_result.status == "success"
+            passed = action_result.success
             if validation_result:
                 passed = passed and validation_result.passed
             

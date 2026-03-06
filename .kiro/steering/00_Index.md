@@ -606,57 +606,106 @@ Which client would you like to use?"
 
 **THERE ARE TWO COMPLETELY SEPARATE WORKFLOWS - DO NOT MIX THEM!**
 
-### Workflow A: APPROVAL TESTING (3-Step Process) - For Enhancements (E in RICE)
+### Workflow A: APPROVAL TESTING (Consolidated Single-Hook Process) - For Enhancements (E in RICE)
 
 **Use When**: Testing approval workflows (EXT_FIN_XXX) for regression testing from existing
 TES-070 documents
 
-**Hook Prefix**: "Approval Step X"
+**Hook**: "Run FSM Approval Regression Tests" (userTriggered)
 
-**Workflow**:
+**Architecture**: Universal hook with intelligent agent routing
+- Hook orchestrates entire workflow (parse TES-070, generate JSON, invoke subagent)
+- Hook parses TES-070 to detect transaction type
+- Hook generates EXECUTABLE JSON with MCP Playwright actions
+- Routes to appropriate specialized subagent automatically
+- Subagent uses MCP Playwright tools directly (NOT Python framework)
+- Validates subagent exists before execution
+- Supports multiple approval types (ExpenseInvoice, ManualJournal, CashLedgerTransaction)
 
-1. **Approval Step 1**: Parse existing TES-070 → Generate JSON scenarios
-   - Input: Existing TES-070 document from `Projects/{Client}/TES-070/Approval_TES070s_For_Regression_Testing/`
-   - Output: `Projects/{Client}/TestScripts/approval/{EXT_ID}_auto_approval_test.json`
-   - Uses `extension_id` field (not `interface_id`)
+**Complete Workflow**:
 
-2. **Approval Step 2**: Execute approval tests → Framework runs with real-time progress
-   - Select client and scenario file interactively
-   - Enter FSM credentials (URL, username, password)
-   - Watch real-time progress in console:
-     ```
-     SCENARIO 1/3: 3.1 - Valid Invoice Approval
-       ⏳ Step 1.1: Login to FSM
-          ✅ PASSED
-       ⏳ Step 1.2: Navigate to Payables
-          ✅ PASSED
-     ```
-   - Browser opens on 2nd screen (visible automation)
-   - TES-070 generated automatically
+1. **User Triggers Hook**: Click "Run FSM Approval Regression Tests"
+
+2. **Phase 1: Gather Information**
+   - Hook lists clients in `Projects/` - user selects
+   - Hook lists TES-070 documents in `Projects/{Client}/TES-070/Approval_TES070s_For_Regression_Testing/` - user selects
+   - Hook prompts for FSM credentials (URL, username, password, environment)
+   - Hook saves credentials to `Projects/{Client}/Credentials/` (.env.fsm and .env.passwords)
+
+3. **Phase 2: Parse TES-070 and Detect Transaction Type**
+   - Hook runs: `python ReusableTools/tes070_analyzer.py "<tes070_path>"`
+   - Hook reads generated `*_analysis.json` file
+   - Hook extracts transaction type (ExpenseInvoice, ManualJournal, CashLedgerTransaction)
+   - Hook maps transaction type to specialized subagent:
+     * ExpenseInvoice → invoice-approval-test-agent ✅
+     * ManualJournal → journal-approval-test-agent ❌ (not yet created)
+     * CashLedgerTransaction → cash-approval-test-agent ❌ (not yet created)
+
+4. **Phase 3: Validate Subagent Exists**
+   - Hook checks if required subagent exists in `.kiro/agents/`
+   - If missing: Display error, list available agents, stop execution
+   - If exists: Continue to Phase 4
+
+5. **Phase 4: Generate Executable JSON Scenarios**
+   - Hook creates EXECUTABLE JSON scenario file with proper MCP Playwright action definitions
+   - Hook uses TES-070 analysis to understand test scenarios
+   - Hook generates JSON with actions: `mcp_playwright_browser_navigate`, `mcp_playwright_browser_click`, `mcp_playwright_browser_type`, `mcp_playwright_browser_snapshot`, `mcp_playwright_browser_take_screenshot`
+   - Hook saves to: `Projects/{Client}/TestScripts/approval/{extension_id}_executable_scenarios.json`
+   - Hook validates JSON using: `python ReusableTools/validate_json.py`
+
+6. **Phase 5: Invoke Specialized Testing Subagent**
+   - Hook invokes subagent with prompt containing:
+     * TES-070 Analysis path
+     * Executable Scenarios path
+     * FSM credentials (URL, username, password, environment)
+   - Subagent uses MCP Playwright tools to:
+     * Navigate FSM UI
+     * Create and submit invoices
+     * Perform approvals/rejections
+     * Capture screenshots at each step
+     * Generate TES-070 report with evidence
+
+7. **Phase 6: Display Summary**
+   - Hook shows final summary with pass/fail counts, TES-070 path, evidence location
    - Output: `Projects/{Client}/TES-070/Generated_TES070s/TES-070_{timestamp}_{EXT_ID}.docx`
-
-3. **Approval Step 3**: Review TES-070 → Document already generated
-   - Locate generated TES-070 document
-   - Verify evidence and screenshots
-   - Open in Microsoft Word, press F9 to update TOC
-   - Finalize and deliver
 
 **Key Characteristics**:
 
+- ONE HOOK for ALL approval types (universal entry point)
+- Hook orchestrates everything (parse, generate JSON, invoke subagent)
+- Subagent uses MCP Playwright tools directly (NOT Python testing framework)
+- Intelligent routing based on transaction type detection
+- Specialized subagents for each approval type
 - Starts with EXISTING TES-070 document (regression testing)
 - Tests ENHANCEMENTS (approval workflows, IPA + LPL)
 - Extension IDs start with "EXT_" (e.g., EXT_FIN_004)
 - No test data generation needed (uses live FSM data)
-- No GUI tool - direct JSON generation from TES-070 analysis
-- Framework generates TES-070 automatically in Step 2
-- Real-time progress reporting (no more "stuck" feeling)
+- Subagent generates TES-070 automatically with embedded screenshots
+- Real-time progress reporting
 - Immediate pass/fail feedback for each step
+- Extensible: Add new agents without changing hook
+
+**Currently Available Subagents**:
+
+- ✅ invoice-approval-test-agent: ExpenseInvoice approval workflows (Payables module) - Uses MCP Playwright
+- ❌ journal-approval-test-agent: ManualJournal approval workflows (GL module) - Not yet created
+- ❌ cash-approval-test-agent: CashLedgerTransaction approval workflows (Cash module) - Not yet created
 
 **File Locations**:
 
-- Input: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*.docx`
-- Scenarios: `Projects/{ClientName}/TestScripts/approval/{extension_id}_auto_approval_test.json`
-- Output: `Projects/{ClientName}/TES-070/Generated_TES070s/`
+- Input TES-070: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*.docx`
+- TES-070 Analysis: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*_analysis.json`
+- Executable Scenarios: `Projects/{ClientName}/TestScripts/approval/{extension_id}_executable_scenarios.json`
+- Evidence Screenshots: `Projects/{ClientName}/Temp/evidence/`
+- Output TES-070: `Projects/{ClientName}/TES-070/Generated_TES070s/`
+- Subagents: `.kiro/agents/{agent-name}.md`
+
+**Critical Notes**:
+
+- Subagent MUST use MCP Playwright tools (mcp_playwright_browser_*), NOT Python testing framework
+- Hook generates executable JSON with MCP Playwright actions, NOT framework actions
+- Subagent captures screenshots and generates TES-070 directly
+- Python testing framework (`run_approval_tests_v2.py`) is NOT used in this workflow
 
 ---
 
