@@ -6,6 +6,8 @@ Guide for capturing screenshots and documenting test execution evidence.
 
 Evidence collection provides visual proof of test execution, validates results, and supports troubleshooting.
 
+**IMPORTANT**: Evidence collection works for ANY client project and ANY approval workflow. The folder structure and naming conventions are consistent across all projects and scenarios.
+
 ## Evidence Types
 
 ### Screenshots

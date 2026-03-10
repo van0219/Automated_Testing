@@ -74,19 +74,22 @@ functionality, not developing new IPA processes or integrations.
 
 1. **User Control**: "wait" = pause, "stop" = halt immediately
 2. **Browser Efficiency**: Keep browser open across scenarios - close only when complete
-3. **FSM Navigation**: Always expand sidebar (☰) before navigating
-4. **Browser Zoom**: Use Ctrl+Minus 3x (NOT CSS zoom)
-5. **Record Access**: Double-click to open, single-click only selects
-6. **Data Queries**: Call Data Catalog API before writing Compass SQL
-7. **Large Datasets**: >1M records → use Data Orchestrator/Warehouse (not IPA)
-8. **JavaScript**: IPA uses ES5 only (Mozilla Rhino 1.7R4) - NO ES6 features
-9. **File Systems**: FSM File Storage ≠ SFTP - use File Channels to bridge
-10. **WorkUnit API**: Not exposed - use Process Server Administrator UI
-11. **Date Format**: YYYYMMDD (no separators)
-12. **Error Documentation**: Document UI error messages only - do NOT analyze work unit logs
-13. **Credentials**: NEVER commit to git, NEVER log, ALWAYS read from Credentials/ at runtime
-14. **Data Validation**: Filter by RunGroup field to identify test records
-15. **Framework Execution**: Testing framework MUST run in Kiro's execution context
+3. **FSM Navigation**: Use portal navigation menu (grid icon) for applications/roles, FSM sidebar (☰) for within-role navigation
+4. **Role Switching**: Use role switcher dropdown in FSM header - do NOT navigate back to portal
+5. **Snapshot First**: Always take snapshot before clicking - use refs, never guess selectors
+6. **No run_code**: Never use run_code for navigation - use snapshot + click pattern
+7. **Browser Zoom**: Use Ctrl+Minus 3x (NOT CSS zoom)
+8. **Record Access**: Double-click to open, single-click only selects
+9. **Data Queries**: Call Data Catalog API before writing Compass SQL
+10. **Large Datasets**: >1M records → use Data Orchestrator/Warehouse (not IPA)
+11. **JavaScript**: IPA uses ES5 only (Mozilla Rhino 1.7R4) - NO ES6 features
+12. **File Systems**: FSM File Storage ≠ SFTP - use File Channels to bridge
+13. **WorkUnit API**: Not exposed - use Process Server Administrator UI
+14. **Date Format**: YYYYMMDD (no separators)
+15. **Error Documentation**: Document UI error messages only - do NOT analyze work unit logs
+16. **Credentials**: NEVER commit to git, NEVER log, ALWAYS read from Credentials/ at runtime
+17. **Data Validation**: Filter by RunGroup field to identify test records
+18. **Framework Execution**: Testing framework MUST run in Kiro's execution context
     (Playwright MCP tools only available when Kiro executes code directly)
 
 ## Quick Decision Trees
@@ -568,6 +571,8 @@ Power activates automatically and guides through workflow phases.
 
 **Workflow Phases**:
 
+**Note**: The following workflow applies to REGRESSION TESTING with existing TES-070 documents. For NET NEW TESTING (generic test scripts), adapt execution based on scenario objectives using your FSM knowledge.
+
 1. **Phase 1: Parse TES-070 Document**
    - Run `python ReusableTools/tes070_analyzer.py "<tes070_path>"`
    - Extract document metadata, test summary, scenarios
@@ -582,14 +587,21 @@ Power activates automatically and guides through workflow phases.
    - Output: `Projects/{Client}/TestScripts/approval/{extension_id}_test_instructions.json`
 
 3. **Phase 3: Execute Tests**
+   - **REGRESSION TESTING**: Follow TES-070 test steps EXACTLY as written - DO NOT interpret, DO NOT deviate, DO NOT create your own steps
+   - **NET NEW TESTING**: Use your knowledge and instincts to execute tests based on generic test script objectives
    - Load FSM credentials from `Projects/{Client}/Credentials/`
    - For each scenario:
      * Launch browser (keep open across scenarios)
      * Navigate to FSM portal and login
-     * Execute test steps using MCP Playwright tools
+     * **REGRESSION**: Read each TES-070 step word-by-word and execute exactly what it says
+       - If TES-070 says "Staff Accountant role" → Use "Staff Accountant" (NOT "Global Ledger" or similar)
+       - If TES-070 says "Process Journals > Create" → Navigate to exactly "Process Journals" then "Create"
+       - If TES-070 says "amount below $1,000" → Use $999.99 or $500.00 (NOT $1,000 or more)
+     * **NET NEW**: Interpret scenario objectives and create appropriate test steps using FSM knowledge
      * Take snapshots before actions (find element refs)
      * Capture screenshots after critical steps
-     * Validate results against expected outcomes
+     * Validate results match expectations
+     * If validation fails, STOP and document the issue (regression) or adapt approach (net new)
    - Close browser after all scenarios complete
    - Output: `Projects/{Client}/Temp/evidence/{scenario_id}/`
 
@@ -641,50 +653,52 @@ Power activates automatically and guides through workflow phases.
 
 ---
 
-### Workflow B: INTERFACE TESTING (4-Step Process) - For Interfaces (I in RICE)
+### Workflow B: INTERFACE TESTING (DEPRECATED) - For Interfaces (I in RICE)
 
-**Use When**: Testing inbound/outbound file interfaces (INT_FIN_XXX) from scratch
+**STATUS**: ⚠️ DEPRECATED - Hooks moved to `.kiro/hooks/backup/`
 
-**Hook Prefix**: "Interface Step X"
+**Previous Workflow** (4-Step Process with Hooks):
 
-**Workflow**:
+The interface testing workflow used 4 hooks (Interface Steps 1-4) for testing inbound/outbound file interfaces (INT_FIN_XXX) from scratch. These hooks have been deprecated and moved to backup.
 
-1. **Interface Step 1**: Generate test data files
-2. **Interface Step 2**: Define scenarios using GUI tool
-3. **Interface Step 3**: Execute interface tests → Framework runs, generates TES-070
-4. **Interface Step 4**: Review TES-070 → Document already generated
+**Deprecated Hooks** (now in `.kiro/hooks/backup/`):
+- `interface-step1-generate-test-data.kiro.hook.BACKUP`
+- `interface-step2-define-test-scenarios.kiro.hook.BACKUP`
+- `interface-step3-execute-tests-fsm.kiro.hook.BACKUP`
+- `interface-step4-generate-tes070.kiro.hook.BACKUP`
 
-**Key Characteristics**:
+**Why Deprecated**:
+- Python-based testing framework not suitable for production workflows
+- Does not align with modular power architecture
+- Replaced by manual execution using MCP Playwright tools directly
 
-- Starts from SCRATCH (no existing TES-070)
-- Tests INTERFACES (file uploads, CIS, data exchange)
-- Interface IDs start with "INT_" (e.g., INT_FIN_013)
-- Requires test data generation (CSV/JSON files)
-- Uses GUI tool (test_scenario_builder_modern.py) for scenario creation
-- Framework generates TES-070 automatically in Step 3
+**Current Approach for Interface Testing**:
+- Manual test execution using MCP Playwright tools
+- Direct browser automation without framework wrapper
+- Custom test scripts per interface as needed
+- Awaiting future power or improved framework solution
 
-**File Locations**:
+**Key Characteristics** (for reference):
+- Started from SCRATCH (no existing TES-070)
+- Tested INTERFACES (file uploads, CIS, data exchange)
+- Interface IDs started with "INT_" (e.g., INT_FIN_013)
+- Required test data generation (CSV/JSON files)
+- Used GUI tool (test_scenario_builder_modern.py) for scenario creation
 
+**File Locations** (still valid for manual testing):
 - Test Data: `Projects/{ClientName}/TestScripts/test_data/`
 - Scenarios: `Projects/{ClientName}/TestScripts/{inbound|outbound}/{interface_id}_test_scenarios.json`
 - Output: `Projects/{ClientName}/TES-070/Generated_TES070s/`
 
 ---
 
-## TES-070 Creation Workflow (5-Step Process)
-
-Complete workflow for provisioning projects, generating test data, creating scenarios,
-executing tests, and generating TES-070 documents.
-
-**NOTE**: This section describes the INTERFACE workflow (Workflow B above). For APPROVAL
-workflow, see "Workflow A" above.
+## Active Hooks
 
 ### New Project Setup (One-Time)
 
 **Hook**: "New Project Setup" (userTriggered)
 
-**Purpose**: Provision new client project with complete folder structure and credential
-templates
+**Purpose**: Provision new client project with complete folder structure and credential templates
 
 **When**: Before starting work on new client - run ONCE per client
 
@@ -692,102 +706,39 @@ templates
 
 1. Click "New Project Setup" hook
 2. AI asks: "Do you want to create a new FSM testing project?"
-3. If yes: AI runs `python ReusableTools/new_project_setup.py` and tells user to answer
-   terminal questions
-4. Script prompts for: Client name, Tenant ID, FSM credentials, SFTP details
-   (optional defaults)
+3. If yes: AI runs `python ReusableTools/new_project_setup.py` and tells user to answer terminal questions
+4. Script prompts for: Client name, Tenant ID, FSM credentials, SFTP details (optional defaults)
 5. AI shows summary of what was created
 
-**Output**: Fully provisioned project with Credentials/, TestScripts/, TES-070/, Temp/,
-README.md
+**Output**: Fully provisioned project with Credentials/, TestScripts/, TES-070/, Temp/, README.md
 
-### Interface Step 1: Generate Test Data
+### Load Steering Files
 
-**Hook**: "Interface Step 1: Generate Test Data" (userTriggered)
+**Hook**: "Load Steering Files" (userTriggered)
 
-**Purpose**: Generate fresh test data files with current dates and correct FSM field names
+**Purpose**: Manually load specific steering files (01-11) into context when needed
 
-**Workflow**:
-
-1. Ask which client/interface and FSM business class name
-2. Use fsm_field_discovery.py to query FSM API for valid field names
-3. Kiro analyzes discovered fields and selects which to include
-   (required fields + commonly used optional fields)
-4. Use test_data_generator.py with Kiro's selected field list
-5. Generate scenario files (valid, invalid, duplicate, empty, errors)
-6. Save to Projects/{ClientName}/TestScripts/test_data/
-
-**Output**: Fresh test data files with current dates and correct FSM field names
-
-### Interface Step 2: Define Test Scenarios
-
-**Hook**: "Interface Step 2: Define Test Scenarios" (userTriggered)
-
-**Purpose**: Launch GUI for test scenario creation
+**When**: When you need detailed guidance on specific topics (FSM navigation, RICE methodology, IPA design, etc.)
 
 **Workflow**:
 
-1. Launch test_scenario_builder_modern.py GUI
-2. User selects interface type (Inbound/Outbound/Approval)
-3. 3 predefined scenarios auto-load from templates (.kiro/templates/)
-4. User fills interface details and edits scenarios
-5. Save JSON to Projects/{ClientName}/TestScripts/{interface_type}/{interface_id}_test_scenarios.json
+1. Click "Load Steering Files" hook
+2. AI presents list of available steering files with descriptions
+3. Select which steering file(s) to load
+4. AI loads selected files using discloseContext tool
 
-**Output**: JSON file with test scenario definitions
-
-### Interface Step 3: Execute Tests in FSM
-
-**Hook**: "Interface Step 3: Execute Tests in FSM" (userTriggered) - v2.0.0
-
-**Purpose**: Execute test scenarios using automated testing framework
-
-**Workflow**:
-
-1. Select client and test scenario JSON
-2. Verify credentials in Credentials/
-3. Framework executes automatically
-   - Loads credentials, initializes run_group
-   - Executes scenarios, captures screenshots
-   - Monitors work units, validates results
-   - Generates TES-070
-4. Review execution summary
-
-**Critical Rules**:
-
-- Framework MUST run in Kiro's execution context (MCP tools only available here)
-- Do NOT run as subprocess (`python run_tests.py` will fail)
-- Browser stays open across scenarios for efficiency
-- Sequential execution (one scenario at a time)
-
-**Output**: Screenshots captured, results validated, TES-070 generated
-
-### Interface Step 4: Review TES-070 Document
-
-**Hook**: "Interface Step 4: Review TES-070 Document" (userTriggered) - v2.0.0
-
-**Purpose**: Review and finalize TES-070 document (already generated by framework)
-
-**Workflow**:
-
-1. Locate TES-070 document in TES-070/Generated_TES070s/
-2. Open in Microsoft Word
-3. Press F9 to update Table of Contents
-4. Review all sections (title page, test summary, scenario results, screenshots)
-5. Add any missing screenshots manually if needed
-6. Save and finalize
-
-**Output**: Finalized TES-070 .docx document ready for delivery
-
-### Complete Flow
-
-```text
-New Project Setup (One-Time) → Interface Step 1: Generate Test Data →
-Interface Step 2: Define Test Scenarios → Interface Step 3: Execute Tests →
-Interface Step 4: Review TES-070
-```
-
-**Usage**: Run "New Project Setup" once per client, then Steps 1-4 in sequence for each
-interface.
+**Available Steering Files**:
+- 01_FSM_Navigation_Guide.md - FSM UI, Playwright automation
+- 02_RICE_Methodology_and_Specifications.md - RICE analysis, specs
+- 03_IPA_and_IPD_Complete_Guide.md - IPA design, LPD files
+- 04_FSM_Business_Classes_and_API.md - Business classes, APIs
+- 05_Compass_SQL_CheatSheet.md - Compass SQL queries
+- 06_Infor_OS_Data_Fabric_Guide.md - Data Fabric APIs
+- 07_CIS_Configurable_Integration_Solution.md - CIS interfaces
+- 08_TES070_Standards_and_Generation.md - TES-070 standards
+- 09_Work_Unit_Analysis.md - Work unit logs, troubleshooting
+- 10_JSON_Generation_Best_Practices.md - JSON generation
+- 11_Kiro_Agent_Automation_Guide.md - Kiro automation features
 
 ## Test Evidence Requirements
 

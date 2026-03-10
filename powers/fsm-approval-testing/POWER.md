@@ -35,26 +35,180 @@ Use this power when:
 
 ## Onboarding
 
-### First-Time Setup
+### Automatic Workspace Discovery (CRITICAL)
 
-1. **Verify FSM Credentials**
-   - Credentials stored in `Projects/{ClientName}/Credentials/`
+**When power activates, ALWAYS perform these steps FIRST:**
+
+1. **Scan Projects Folder**
+   - List all directories in `Projects/` folder
+   - Identify available client projects (e.g., SONH, ClientB, ClientC)
+
+2. **For Each Project, Check:**
+   - TES-070 documents in `Projects/{Client}/TES-070/Approval_TES070s_For_Regression_Testing/`
+   - Credentials configured in `Projects/{Client}/Credentials/`
+   - List available test documents with extension IDs
+
+3. **Present Contextual Summary to User:**
+   ```
+   ## FSM Approval Testing Power - Ready to Use!
+   
+   ### Your Current Setup
+   
+   **Available Projects:**
+   - SONH (3 TES-070 documents, credentials configured)
+   - ClientB (1 TES-070 document, credentials missing)
+   
+   **SONH - Available TES-070 Documents:**
+   1. EXT_FIN_001 - Manual Journal Entry Approval
+   2. EXT_FIN_004 - Expense Invoice Approval ✅ Previously tested
+   3. EXT_FIN_016 - Cash Ledger Transaction Approval
+   
+   ### How to Use
+   
+   **Test Existing Workflows:**
+   "Test EXT_FIN_001 for SONH"
+   "Run all SONH approval tests"
+   
+   **Add New Client Project:**
+   1. Trigger "New Project Setup" hook (userTriggered)
+   2. Add FSM credentials to Projects/{NewClient}/Credentials/
+   3. Add TES-070 documents to Projects/{NewClient}/TES-070/Approval_TES070s_For_Regression_Testing/
+   4. Run approval tests - power will discover new project automatically
+   
+   What would you like to test?
+   ```
+
+4. **If No Projects Found:**
+   - Explain that no client projects exist yet
+   - Guide user to trigger "New Project Setup" hook
+   - Explain folder structure and file requirements
+
+### First-Time Setup (For New Projects)
+
+1. **Create New Project**
+   - Trigger "New Project Setup" hook (userTriggered)
+   - Provides complete folder structure and credential templates
+
+2. **Add FSM Credentials**
    - `.env.fsm` - FSM URL, username, environment
    - `.env.passwords` - FSM password (NEVER commit to git)
+   - Location: `Projects/{ClientName}/Credentials/`
 
-2. **Verify TES-070 Documents**
-   - Located in `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/`
+3. **Add TES-070 Documents**
    - Must be Word documents (.docx format)
    - Should contain test scenarios with steps and expected results
+   - Extension IDs should start with "EXT_" (e.g., EXT_FIN_004)
+   - Location: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/`
 
-3. **Verify Python Tools**
+4. **Verify Python Tools** (one-time check)
    - `ReusableTools/tes070_analyzer.py` - Parse TES-070 documents
    - `ReusableTools/create_test_instructions.py` - Generate test instructions JSON
    - `ReusableTools/validate_json.py` - Validate JSON files
 
-4. **Verify MCP Playwright Tools**
-   - Browser automation tools should be available
+5. **Verify MCP Playwright Tools** (one-time check)
+   - Browser automation tools should be available (built into Kiro)
    - Test with simple navigation before full test execution
+
+## Testing Modes: Regression vs Net New
+
+This power supports TWO distinct testing modes with different adherence requirements:
+
+### Mode 1: Regression Testing (EXACT ADHERENCE REQUIRED) ⚠️
+
+**When**: Testing existing functionality using completed TES-070 documents with detailed test steps
+
+**Rule**: **YOU MUST FOLLOW TES-070 TEST STEPS EXACTLY AS WRITTEN. DO NOT INTERPRET. DO NOT DEVIATE. DO NOT CREATE YOUR OWN STEPS.**
+
+The TES-070 document contains the EXACT test steps that must be executed. Every word is a requirement, not a suggestion.
+
+### Examples of Exact Adherence:
+
+- If TES-070 says "Log In as Staff Accountant role" → Switch to "Staff Accountant" role (NOT "Global Ledger" or any other role)
+- If TES-070 says "Process Journals > Create" → Navigate to exactly "Process Journals" then "Create" (NOT "Journals" or similar menu)
+- If TES-070 says "amount below $1,000" → Use amount like $999.99 or $500.00 (NOT $1,000 or $1,500)
+- If TES-070 says "event code not equal to TR and BOA" → Use event code like "GE" or "AD" (NOT "TR" or "BOA")
+- If TES-070 says "Release the transaction" → Click "Release" button (NOT "Submit" or "Save")
+
+### What This Means:
+
+1. **Read the TES-070 step word-by-word** - Every detail matters
+2. **Execute exactly what it says** - No interpretation, no assumptions
+3. **Use exact values specified** - Amounts, codes, roles, navigation paths
+4. **Follow exact order** - Don't skip steps, don't reorder steps
+5. **Verify exact results** - Check that outcome matches TES-070 expectation
+
+### What NOT to Do:
+
+- ❌ Substitute similar roles (e.g., "Global Ledger" instead of "Staff Accountant")
+- ❌ Use similar navigation (e.g., "Journals" instead of "Process Journals")
+- ❌ Change values (e.g., $1,000 instead of < $1,000)
+- ❌ Skip steps or combine steps
+- ❌ Add extra steps not in TES-070
+- ❌ Interpret what you think the step means
+
+### Validation After Each Step:
+
+After executing each TES-070 step:
+1. Verify action completed successfully
+2. Verify result matches TES-070 expectation
+3. Take screenshot for evidence
+4. If validation fails, STOP and document the issue
+
+**The TES-070 document is the source of truth. Follow it exactly.**
+
+### Mode 2: Net New Testing (ADAPTIVE EXECUTION)
+
+**When**: Testing new functionality using generic test scripts from functional consultants with:
+- High-level scenarios (no detailed TES-070)
+- Few or incomplete test steps
+- General test objectives without exact navigation paths
+
+**Rule**: **Use your knowledge and instincts to execute tests based on the generic test script provided.**
+
+In this mode:
+- ✅ Interpret scenario descriptions and create appropriate test steps
+- ✅ Use FSM navigation knowledge to find appropriate paths
+- ✅ Make reasonable assumptions about values (amounts, codes, etc.)
+- ✅ Adapt to FSM UI structure and available options
+- ✅ Create comprehensive test coverage based on scenario intent
+- ✅ Document your approach and decisions
+
+**Example - Net New Test Script:**
+```
+Scenario: Test manual journal approval for amounts under $1,000
+Expected: Journal should route to Agency approver and be approved
+```
+
+**Your Approach:**
+1. Determine appropriate role (Staff Accountant or Global Ledger)
+2. Navigate to journal creation (Process Journals or similar)
+3. Create journal with reasonable amount (e.g., $500)
+4. Choose appropriate event code (not TR or BOA)
+5. Submit for approval
+6. Monitor work unit and verify approval routing
+7. Document all steps taken
+
+**Key Difference:**
+- **Regression**: Follow exact steps from TES-070 (e.g., "Staff Accountant role", "Process Journals > Create")
+- **Net New**: Use judgment to achieve scenario objective (e.g., "create journal under $1,000 and verify approval")
+
+### How to Identify Testing Mode
+
+**Regression Testing Indicators:**
+- Existing TES-070 document with detailed steps
+- Each step has specific navigation paths, values, and expected results
+- Document shows "PASS" results from previous testing
+- Purpose is to verify existing functionality still works
+
+**Net New Testing Indicators:**
+- Generic test script or scenario description
+- High-level objectives without detailed steps
+- No previous test results or TES-070 document
+- Purpose is to test new functionality or create initial test documentation
+
+**When in doubt**: Ask the user which mode to use or check if a TES-070 document exists.
+
+---
 
 ## Workflow
 
@@ -149,13 +303,38 @@ This power uses MCP Playwright tools that are **built into Kiro** (no external M
 
 ### Work Unit Monitoring
 
-1. Switch to "Process Server Administrator" role
+**Accessing Process Server Administrator:**
+
+**Method 1: From Portal (First Time)**
+1. Click "Open navigation menu" button (grid icon at top)
+2. Take snapshot to see navigation menu
+3. Click "See more" under Applications section
+4. Click "Financials & Supply Management"
+5. Click "Process Server Administrator" role
+
+**Method 2: Role Switcher (Already in FSM)**
+1. Take snapshot to find role switcher combobox
+2. Click combobox (e.g., "Payables, Payables")
+3. Wait 1 second for dropdown
+4. Take snapshot to see roles
+5. Click "Process Server Administrator"
+6. Wait 3 seconds for role to load
+
+**Method 3: User Settings (Preferred Application)**
+1. Click "More" menu → "Settings"
+2. Change "Preferred Application" to "Process Server Administrator"
+3. Click "Save"
+
+**Navigating to Work Units:**
+1. Once in Process Server Administrator role
 2. Expand "Administration" menu
 3. Click "Work Units"
 4. Search by work unit ID or process name
 5. Extract status from page
 6. Refresh page to get updated status
 7. Poll until terminal state (Completed, Failed, Canceled)
+
+**CRITICAL**: Use snapshot + click pattern for all navigation. Never use run_code for clicking elements.
 
 ## Steering Files
 
@@ -244,6 +423,9 @@ Detailed workflow guides available in `steering/` directory:
 - Verify FSM URL is accessible
 - Check for FSM UI changes (selectors may need updates)
 - Review browser console for JavaScript errors
+- **Use snapshot + click pattern** - Never use run_code for navigation
+- **Handle modal states** - run_code doesn't handle beforeunload dialogs
+- **Wait between actions** - Give UI time to update (1-3 seconds)
 
 ### Test Execution Slow
 
@@ -302,6 +484,42 @@ Detailed workflow guides available in `steering/` directory:
 - Confirm auto-approval configuration is active
 - May need manual approval if conditions not met
 
+### Navigation to Process Server Administrator Fails
+
+**Symptom**: Can't find Process Server Administrator in navigation, stuck on Payables page
+
+**Common Mistakes**:
+- Trying to navigate using FSM sidebar (☰) - PSA is accessed via portal or role switcher
+- Using run_code instead of snapshot + click pattern
+- Not waiting for dropdowns to load before taking snapshot
+
+**Solution - Portal Navigation (First Time)**:
+1. Click "Open navigation menu" button (grid icon at top of portal)
+2. Take snapshot to see navigation menu structure
+3. Click "See more" under Applications section
+4. Take snapshot to see all applications
+5. Click "Financials & Supply Management"
+6. Click "Process Server Administrator" role
+
+**Solution - Role Switcher (Already in FSM)**:
+1. Take snapshot to find role switcher combobox
+2. Look for pattern: `combobox "[CurrentRole], [CurrentRole]"`
+3. Click combobox using ref from snapshot
+4. Wait 1 second for dropdown to load
+5. Take snapshot to see available roles
+6. Find "Process Server Administrator" option
+7. Click using ref from snapshot
+8. Wait 3 seconds for role to load
+
+**Solution - User Settings**:
+1. Click "More" menu in FSM header
+2. Click "Settings"
+3. Change "Preferred Application" to "Process Server Administrator"
+4. Click "Save"
+5. Refresh or navigate to FSM home
+
+**Key Learning**: Portal navigation menu (grid icon) is DIFFERENT from FSM sidebar menu (☰). Use portal menu to access applications/roles, use FSM sidebar to navigate within a role.
+
 ## Example Usage
 
 **User Request:**
@@ -324,6 +542,14 @@ Test the expense invoice approval workflow using TES-070 document EXT_FIN_004
 
 ## Version History
 
+- **1.0.2** (2026-03-10) - Navigation improvements and troubleshooting
+  - Added detailed Process Server Administrator navigation methods (portal, role switcher, settings)
+  - Added troubleshooting section for navigation failures
+  - Documented portal navigation menu vs FSM sidebar menu distinction
+  - Added guidance on snapshot + click pattern vs run_code
+  - Added modal state handling notes
+  - Improved work unit monitoring navigation steps
+  
 - **1.0.1** (2026-03-10) - Test execution validation and improvements
   - Validated Scenario 3.1 execution (garnishment invoice auto-approval)
   - Added work unit monitoring guidance (CRITICAL for approval workflows)

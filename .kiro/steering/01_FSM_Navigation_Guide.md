@@ -22,6 +22,65 @@ This guide provides actionable patterns for FSM UI navigation, Playwright automa
 
 ## Critical Rules - Execute in Order
 
+### Rule 0: FSM Role Switcher (CRITICAL)
+
+**FSM roles are accessed via a dropdown switcher in the FSM header, NOT separate applications or workspaces.**
+
+**Location**: Top of FSM iframe, next to role icon/button
+
+**How to identify**:
+- Look for: `combobox "[RoleName], [RoleName]"` (e.g., "Payables, Payables")
+- Usually has format: `[CurrentRole], [CurrentRole]`
+- Located in FSM header area with role icon
+
+**How to switch roles**:
+
+```javascript
+// 1. Take snapshot to find role switcher
+await mcp_playwright_browser_snapshot();
+
+// 2. Find combobox with current role name
+// Example: combobox "Payables, Payables" [ref=f2e19]
+
+// 3. Click the combobox to open dropdown
+await mcp_playwright_browser_click({ ref: "f2e19" });
+
+// 4. Wait for dropdown to appear
+await page.waitForTimeout(1000);
+
+// 5. Take snapshot to see available roles
+await mcp_playwright_browser_snapshot();
+
+// 6. Find and click desired role from listbox
+// Example: option "Global Ledger" [ref=f2e640]
+await mcp_playwright_browser_click({ ref: "f2e640" });
+
+// 7. Wait for role to load
+await page.waitForTimeout(3000);
+```
+
+**Common FSM Roles**:
+- **Payables** - Invoice management, vendor payments
+- **Global Ledger** - Manual journals, GL transactions  
+- **Staff Accountant** - Journal entry, GL operations
+- **Process Server Administrator** - IPA management, work units
+- **Integration Architect** - CIS interfaces
+- **Receivables** - AR transactions
+- **Cash** - Cash management
+- **Assets** - Asset management
+- **Purchasing** - PO management
+- **Requester** - Purchase requisitions
+
+**CRITICAL**: When test steps say "Log in as [Role]", this means:
+1. You are already logged into FSM
+2. Use the role switcher dropdown to change roles
+3. Do NOT logout and login again
+
+**Example from TES-070**:
+- Test step: "Log In as Staff Accountant role"
+- Action: Click role switcher → Select "Staff Accountant" from dropdown
+- NOT: Logout and login with different credentials
+
 ### Rule 1: Snapshot Before Every Action
 
 **ALWAYS use `mcp_playwright_browser_snapshot` before any interaction.**
@@ -284,16 +343,32 @@ await page.evaluate(() => {
 
 **CRITICAL**: FSM (Financials & Supply Management) is the main application. Roles are accessed WITHIN FSM.
 
-**Navigation sequence:**
+**Initial Navigation (First Login):**
 
 1. Login to Infor OS Portal
 2. Take snapshot
-3. Expand sidebar (☰) if collapsed
-4. Navigate to Applications section
-5. Click "See more"
-6. Click "Financials & Supply Management"
-7. Wait for "My Available Applications" page
-8. Select desired role (Integration Architect, Process Server Administrator, Payables, etc.)
+3. Click "Open navigation menu" button (grid icon at top)
+4. Take snapshot to see navigation menu
+5. Scroll to "Applications" section
+6. Click "See more" under Applications
+7. Take snapshot to see all applications
+8. Click "Financials & Supply Management"
+9. Wait for "My Available Applications" page
+10. Select desired role (Integration Architect, Process Server Administrator, Payables, etc.)
+
+**Switching Roles (Already in FSM):**
+
+Use the FSM role switcher dropdown (see Rule 0 above) - DO NOT navigate back to portal.
+
+**Portal Navigation Menu Structure:**
+
+When you click "Open navigation menu" (grid icon), you'll see:
+- **Workspaces** section (Controller, Inventory Manager, Buyer, etc.)
+- **Bookmarks** section (user-specific bookmarks)
+- **Applications** section (OS, Inbox, Document Management, etc.)
+  - Click "See more" to see full list including FSM
+
+**CRITICAL**: The portal navigation menu is DIFFERENT from the FSM sidebar menu. Portal menu accesses applications, FSM sidebar navigates within FSM.
 
 ### Search-Based Navigation (Recommended)
 
@@ -358,7 +433,7 @@ await page.click('text=Invoice Routing Rules');
 
 **Problem**: Using `mcp_playwright_browser_run_code` to navigate or click elements
 
-**Impact**: Timeout errors, element not found, wasted debugging time
+**Impact**: Timeout errors, element not found, wasted debugging time, modal state errors
 
 **Solution**: ALWAYS use snapshot first, then click with refs
 
@@ -379,6 +454,12 @@ await mcp_playwright_browser_snapshot();
 // 3. Click using ref
 await mcp_playwright_browser_click({ ref: "f3e257" });
 ```
+
+**Why run_code fails:**
+- Doesn't handle modal states (beforeunload dialogs)
+- Doesn't wait for elements properly
+- Harder to debug when selectors change
+- Snapshot + click pattern is more reliable
 
 ### 2. Confusing PSA Homepage with Work Units Page
 
@@ -462,9 +543,37 @@ Process Server Administrator role provides access to IPA process management: pro
 
 ### Accessing Process Server Administrator
 
+**Method 1: From Portal (First Time)**
+
 1. Login to FSM environment
-2. Switch to "Process Server Administrator" role
-3. Access via hamburger menu (☰) → Configuration or Scheduling sections
+2. Click "Open navigation menu" button (grid icon at top)
+3. Take snapshot to see navigation menu
+4. Click "See more" under Applications section
+5. Take snapshot to see all applications
+6. Click "Financials & Supply Management"
+7. Wait for "My Available Applications" page
+8. Click "Process Server Administrator" role
+
+**Method 2: Role Switcher (Already in FSM)**
+
+1. Take snapshot to find role switcher
+2. Look for combobox with current role name (e.g., "Payables, Payables")
+3. Click the combobox to open dropdown
+4. Wait for dropdown to appear (1 second)
+5. Take snapshot to see available roles
+6. Find "Process Server Administrator" option
+7. Click to switch roles
+8. Wait for role to load (3 seconds)
+
+**Method 3: User Settings (Preferred Application)**
+
+1. Click "More" menu in FSM header
+2. Click "Settings"
+3. In "Preferred Application" dropdown, select "Process Server Administrator"
+4. Click "Save"
+5. Navigate back to FSM home to load new role
+
+**CRITICAL**: Once in FSM, use role switcher or settings to change roles. Do NOT navigate back to portal applications menu.
 
 **Key areas:**
 

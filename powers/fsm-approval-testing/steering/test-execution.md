@@ -10,10 +10,62 @@ Execute test scenarios from test instructions JSON using MCP Playwright tools fo
 
 - Test instructions JSON created (from `create_test_instructions.py`)
 - FSM credentials configured in `Projects/{Client}/Credentials/`
-- MCP Playwright tools available
+- MCP Playwright tools available (built into Kiro)
 - Browser automation capability
 
-## Workflow Steps
+**IMPORTANT**: This workflow executes tests for ANY approval TES-070 document. The test execution adapts to different:
+- Client projects (SONH, ClientB, ClientC, etc.)
+- Approval types (ExpenseInvoice, ManualJournal, CashLedgerTransaction, etc.)
+- Test scenarios (auto-approval, manual approval, rejection, etc.)
+- Business rules (vendor class, authority code, amount thresholds, etc.)
+
+## Testing Modes
+
+This workflow supports TWO distinct testing modes:
+
+### Mode 1: Regression Testing (EXACT ADHERENCE)
+
+**When**: Testing with existing TES-070 documents that have detailed test steps
+
+**Rule**: Follow TES-070 steps EXACTLY as written - no interpretation, no deviation
+
+**Characteristics**:
+- Detailed TES-070 document exists
+- Each step has specific navigation, values, expected results
+- Document shows previous "PASS" results
+- Purpose: Verify existing functionality still works
+
+### Mode 2: Net New Testing (ADAPTIVE EXECUTION)
+
+**When**: Testing new functionality with generic test scripts from functional consultants
+
+**Rule**: Use your knowledge and instincts to execute tests based on generic test script
+
+**Characteristics**:
+- Generic test script or scenario description
+- High-level objectives without detailed steps
+- No previous TES-070 document
+- Purpose: Test new functionality or create initial documentation
+
+**Example - Net New:**
+```
+Scenario: Test manual journal approval for amounts under $1,000
+Expected: Journal should route to Agency approver
+```
+
+Your approach:
+- Determine appropriate role and navigation
+- Create journal with reasonable values
+- Submit and monitor approval
+- Document your approach
+
+**When in doubt**: Ask user which mode or check if TES-070 document exists.
+
+---
+
+## Workflow Steps (Mode 1: Regression Testing)
+
+The following workflow applies to REGRESSION TESTING with existing TES-070 documents.
 
 ### Step 1: Load Test Instructions
 
@@ -92,22 +144,123 @@ Create folder for scenario evidence:
 Projects/{Client}/Temp/evidence/{scenario_id}/
 ```
 
-#### 4.2 Interpret Test Steps
+#### 4.2 Follow Test Steps EXACTLY (REGRESSION TESTING MODE)
 
-Read test step descriptions (human-readable) and translate to browser actions:
+**This section applies to REGRESSION TESTING with existing TES-070 documents.**
 
-**Example Step:** "Navigate to Payables and create expense invoice"
+For NET NEW TESTING (generic test scripts without detailed TES-070), use adaptive execution based on scenario objectives.
 
-**Browser Actions:**
-1. Take snapshot (find elements)
-2. Click sidebar menu (☰)
-3. Click "Applications"
-4. Scroll to "Financials & Supply Management"
-5. Click FSM application
-6. Wait for iframe
-7. Switch to iframe context
-8. Click "Payables" role
-9. Take screenshot (evidence)
+---
+
+**DO NOT interpret or translate test steps. Follow them EXACTLY as written in the TES-070 document.**
+
+The TES-070 document provides the exact test steps that must be executed. You are NOT allowed to:
+- Interpret what you think the step means
+- Substitute similar values or navigation paths
+- Skip steps or combine steps
+- Add extra steps not specified
+- Deviate in any way from the written steps
+
+**TES-070 Step Example:**
+```
+Step 1: Log In as Staff Accountant role. 
+Process Journals>Create
+Create Manual Journal with total functional debit amount below $1,000 and release the transaction.
+
+The status of the transaction turns to Pending Approval.
+```
+
+**How to Execute (CORRECT):**
+
+1. **Parse the step into atomic actions:**
+   - "Log In as Staff Accountant role" → Switch to "Staff Accountant" role using role dropdown
+   - "Process Journals>Create" → Navigate to "Process Journals" menu, then click "Create"
+   - "Create Manual Journal" → Fill form with required fields
+   - "total functional debit amount below $1,000" → Use amount like $999.99 or $500.00
+   - "release the transaction" → Click "Release" button
+   - "status turns to Pending Approval" → Verify status field shows "Pending Approval"
+
+2. **Execute each atomic action in exact order:**
+   - Take snapshot (find elements)
+   - Execute action with exact parameters from TES-070
+   - Wait for completion
+   - Verify result matches TES-070 expectation
+   - Take screenshot (evidence)
+   - Move to next action
+
+3. **DO NOT:**
+   - Substitute similar roles (e.g., "Global Ledger" instead of "Staff Accountant") ❌
+   - Use similar navigation paths (e.g., "Journals" instead of "Process Journals") ❌
+   - Change amounts or values (e.g., $1,000 instead of < $1,000) ❌
+   - Skip steps or combine steps ❌
+   - Add extra steps not in TES-070 ❌
+   - Interpret or assume what the step means ❌
+
+**Example - CORRECT Execution:**
+
+TES-070 says: "Log In as Staff Accountant role"
+
+Agent does: 
+1. Take snapshot
+2. Find role dropdown (combobox showing current role)
+3. Click role dropdown to open options
+4. Find "Staff Accountant" option in dropdown
+5. Click "Staff Accountant" option
+6. Wait for role to load
+7. Verify "Staff Accountant" is now selected
+8. Take screenshot (evidence of Staff Accountant role active)
+
+**Example - INCORRECT Execution:**
+
+TES-070 says: "Log In as Staff Accountant role"
+
+Agent does:
+1. Take snapshot
+2. See "Global Ledger" role is already selected
+3. Assume "Global Ledger" has journal functionality
+4. Continue without switching roles ❌ WRONG - Must switch to "Staff Accountant"
+
+OR
+
+Agent does:
+1. Take snapshot
+2. Don't see "Staff Accountant" in visible options
+3. Assume it doesn't exist and try "Global Ledger" instead ❌ WRONG - Must search/scroll to find "Staff Accountant"
+
+**The TES-070 document is the source of truth. Every word matters. Follow it exactly.**
+
+#### 4.3 Validate Step Completion
+
+After executing each TES-070 step, verify:
+
+1. **Action completed successfully** - No errors, expected element appeared
+2. **Result matches TES-070 expectation** - Status changed, form saved, role switched, etc.
+3. **Ready for next step** - Page loaded, elements visible, correct state
+
+**If validation fails:**
+- Take screenshot of current state
+- Document what was expected (from TES-070) vs what actually happened
+- Reference TES-070 step number
+- STOP scenario execution (don't continue with invalid state)
+- Report failure with evidence
+
+**Validation Examples:**
+
+TES-070 says: "The status of the transaction turns to Pending Approval"
+Validation:
+1. Take snapshot
+2. Find status field on page
+3. Extract status value
+4. Verify status = "Pending Approval" (exact match)
+5. If not matching, STOP and document failure
+
+TES-070 says: "Log In as Staff Accountant role"
+Validation:
+1. Take snapshot
+2. Find role indicator (combobox or header showing current role)
+3. Extract current role name
+4. Verify role = "Staff Accountant" (exact match)
+5. If not matching, STOP and document failure
 
 #### 4.3 Execute Browser Actions
 

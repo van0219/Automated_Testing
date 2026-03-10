@@ -12,22 +12,69 @@ TES-070 documents contain test results for FSM approval workflows. This workflow
 - Python tool: `ReusableTools/tes070_analyzer.py`
 - Document located in: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/`
 
+**IMPORTANT**: This workflow works with ANY approval TES-070 document, not just specific samples. The power dynamically discovers all available projects and TES-070 documents.
+
 ## Workflow Steps
 
-### Step 1: Locate TES-070 Document
+### Step 0: Automatic Workspace Discovery (CRITICAL - Do This FIRST)
 
-1. List available clients in `Projects/` directory
-2. Present options to user
-3. User selects client
-4. List TES-070 documents in client's approval testing directory
-5. Present document options to user
-6. User selects TES-070 document
+**Before presenting options to user, ALWAYS scan workspace:**
 
-**Example Path:**
+1. **List all client projects:**
+   ```bash
+   List directories in Projects/
+   ```
+   
+2. **For each project, check:**
+   - TES-070 documents in `Projects/{Client}/TES-070/Approval_TES070s_For_Regression_Testing/`
+   - Credentials in `Projects/{Client}/Credentials/` (.env.fsm and .env.passwords)
+   - Count available documents
+
+3. **Present contextual summary:**
+   ```
+   ## Available Projects and TES-070 Documents
+   
+   **SONH** (3 documents, credentials ✅)
+   - EXT_FIN_001 - Manual Journal Entry Approval
+   - EXT_FIN_004 - Expense Invoice Approval ✅ Previously tested
+   - EXT_FIN_016 - Cash Ledger Transaction Approval
+   
+   **ClientB** (1 document, credentials ❌)
+   - EXT_FIN_025 - Purchase Order Approval
+   
+   **To add new project:**
+   1. Trigger "New Project Setup" hook
+   2. Add credentials to Projects/{NewClient}/Credentials/
+   3. Add TES-070 documents to Projects/{NewClient}/TES-070/Approval_TES070s_For_Regression_Testing/
+   
+   Which project would you like to test?
+   ```
+
+4. **If no projects found:**
+   - Explain no client projects exist
+   - Guide user to trigger "New Project Setup" hook
+   - Explain folder structure requirements
+
+### Step 1: User Selects Project and Document
+
+1. User selects client from discovered projects
+2. List TES-070 documents for selected client
+3. User selects TES-070 document
+
+**Example Paths:**
 ```
 Projects/SONH/TES-070/Approval_TES070s_For_Regression_Testing/
   SoNH_TES-070 - EXT_FIN_004 Expense Invoice Approval Test Results Document.docx
+  
+Projects/ClientB/TES-070/Approval_TES070s_For_Regression_Testing/
+  ClientB_TES-070 - EXT_FIN_025 Purchase Order Approval.docx
 ```
+
+**Supported Document Types:**
+- Any approval workflow TES-070 (not limited to samples)
+- ExpenseInvoice, ManualJournal, CashLedgerTransaction
+- Can be extended to PurchaseOrder, Requisition, etc.
+- Any naming convention (as long as .docx format)
 
 ### Step 2: Run TES-070 Analyzer
 
@@ -146,15 +193,22 @@ The analyzer detects transaction type by examining:
    - "Expense Invoice" → ExpenseInvoice
    - "Manual Journal" → ManualJournal
    - "Cash Ledger" → CashLedgerTransaction
+   - "Purchase Order" → PurchaseOrder (extensible)
+   - "Requisition" → Requisition (extensible)
 
 2. **Scenario Descriptions:**
-   - Keywords: "expense invoice", "journal entry", "cash transaction"
-   - FSM module references: "Payables", "General Ledger", "Cash Management"
+   - Keywords: "expense invoice", "journal entry", "cash transaction", "purchase order"
+   - FSM module references: "Payables", "General Ledger", "Cash Management", "Purchasing"
 
 3. **Business Class Names:**
-   - ExpenseInvoice, ManualJournal, CashLedgerTransaction
+   - ExpenseInvoice, ManualJournal, CashLedgerTransaction, PurchaseOrder, Requisition
 
 **Default:** If unclear, defaults to ExpenseInvoice
+
+**Extensibility:** The analyzer can be extended to support new transaction types by:
+- Adding keywords to detection logic
+- Updating transaction type mapping
+- Adding FSM navigation patterns for new modules
 
 ## Filtering TOC Entries
 
