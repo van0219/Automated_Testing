@@ -64,16 +64,17 @@ Kiro provides seven complementary systems for agent automation, knowledge manage
 
 | Feature | Steering Files | Specs | Skills | Powers | Hooks |
 |---------|---------------|-------|--------|--------|-------|
-| **Standard** | Kiro-only | Kiro-only | Open (agentskills.io) | Kiro-only | Kiro-only |
+| **Standard** | Kiro-only | Kiro-only | Open ([agentskills.io](https://agentskills.io)) | Kiro-only | Kiro-only |
 | **Portable** | No | No | Yes (cross-tool) | No | No |
 | **Location** | `.kiro/steering/` | Workspace root/specs folder | `.kiro/skills/` or `~/.kiro/skills/` | Installed via panel | `.kiro/hooks/` |
 | **Activation** | Always/auto/fileMatch/manual | Manual (create spec) | Keywords or `/command` | Keywords (dynamic) | IDE events |
 | **Can include scripts** | No | No (generates tasks) | Yes | Yes (via MCP) | No (but can run commands) |
 | **Can include tools** | No | No | No | Yes (MCP servers) | No |
-| **Shareable** | Manual copy | Version control | GitHub/import | Marketplace/GitHub | Manual copy |
+| **Shareable** | Manual copy | Version control | GitHub/import/marketplace | Marketplace/GitHub | Manual copy |
 | **Scope** | Workspace or global | Workspace | Workspace or global | Cross-workspace | Workspace |
 | **Best for** | Project standards | Feature/bug development | Reusable workflows | Tool integrations | Event automation |
 | **Format** | Markdown | 3 markdown files | `SKILL.md` + folders | `POWER.md` + `mcp.json` | JSON |
+| **Versioning** | Manual | Manual | Semantic (frontmatter) | Manual | Manual |
 
 ### When to Use What
 
@@ -824,9 +825,24 @@ Use `scripts/security-scan.sh` for automated security checks.
 |-------|----------|-------------|
 | `name` | Yes | Must match folder name. Lowercase, numbers, hyphens only (max 64 chars) |
 | `description` | Yes | When to use this skill. Kiro matches against requests (max 1024 chars) |
-| `license` | No | License name or reference to bundled license file |
-| `compatibility` | No | Environment requirements (tools, network access) |
-| `metadata` | No | Additional key-value data (author, version, etc.) |
+| `version` | Recommended | Semantic versioning (e.g., "1.0.0", "2.0.0") for tracking changes |
+| `license` | Recommended | License name ("MIT", "Apache-2.0", "Proprietary") or reference to bundled license file |
+| `compatibility` | Recommended | Platform compatibility (["kiro"], ["kiro", "cursor"]) and environment requirements |
+| `tags` | Recommended | Array of keywords for categorization (e.g., ["ipa", "code-quality", "analysis"]) |
+| `metadata` | Optional | Additional key-value data (author, repository URL, etc.) |
+
+**Example with All Recommended Fields:**
+
+```markdown
+---
+name: "ipa-coding-standards"
+description: "Automated IPA code quality analysis with domain-segmented review. Use when performing internal code quality reviews or peer reviews of IPA processes."
+version: "2.0.0"
+license: "Proprietary"
+compatibility: ["kiro"]
+tags: ["ipa", "code-quality", "analysis", "reporting", "infor"]
+---
+```
 
 ### Creating Skills
 
@@ -859,21 +875,218 @@ Use `scripts/security-scan.sh` for automated security checks.
 
 - Include specific keywords: "Review pull requests for security and test coverage"
 - Avoid generic phrases: "Help with code"
+- Keywords trigger automatic activation when mentioned in requests
 
 **Keep SKILL.md Focused:**
 
 - Put detailed documentation in `references/` files
 - Kiro loads full `SKILL.md` only when activated
+- Main file should be overview + workflow, details in references
 
 **Use Scripts for Deterministic Tasks:**
 
 - Validation, file generation, API calls work better as scripts
 - Reduces LLM usage and improves reliability
+- Place scripts in `scripts/` folder with clear documentation
 
 **Choose Right Scope:**
 
 - Global: Personal workflows (your review checklist)
 - Workspace: Team procedures (project deployment)
+
+**Follow agentskills.io Standard:**
+
+- Include all required frontmatter fields: `name`, `description`
+- Add recommended fields: `version`, `license`, `compatibility`, `tags`
+
+### Skill Frontmatter Troubleshooting
+
+**Issue**: IDE shows frontmatter errors or warnings for skill files
+
+**Root Cause**: Kiro's skill system has evolved, and older documentation showed optional fields (`version`, `license`, `compatibility`, `tags`) as examples. However, the current implementation only requires `name` and `description` fields.
+
+**Symptoms**:
+
+- IDE displays error notifications for SKILL.md files
+- Frontmatter validation warnings
+- Skill still works but shows warnings
+
+**Solution**: Use minimal frontmatter with only required fields
+
+**Correct Format (Minimal - Recommended):**
+
+```markdown
+---
+name: "ipa-coding-standards"
+description: "Automated IPA code quality analysis with domain-segmented review. Use when performing internal code quality reviews or peer reviews of IPA processes."
+---
+```
+
+**Incorrect Format (Extra Fields Causing Warnings):**
+
+```markdown
+---
+name: "ipa-coding-standards"
+description: "Automated IPA code quality analysis..."
+version: "2.0.0"           # ← Remove these optional fields
+license: "Proprietary"      # ← if causing IDE errors
+compatibility: ["kiro"]     # ← 
+tags: ["ipa", "analysis"]   # ←
+---
+```
+
+**When to Use Optional Fields**:
+
+- Only add optional fields if your skill will be shared publicly
+- For internal/workspace skills, use minimal frontmatter
+- If IDE shows errors, remove optional fields
+
+**Verification**:
+
+After fixing frontmatter, verify:
+
+1. IDE error notifications disappear
+2. Skill still activates correctly (test with `/skill-name`)
+3. Description still matches for automatic activation
+
+**Example Fix** (2026-03-08):
+
+The `ipa-coding-standards` skill had extra frontmatter fields causing IDE errors:
+
+```diff
+---
+name: "ipa-coding-standards"
+description: "Automated IPA code quality analysis..."
+-version: "2.0.0"
+-license: "Proprietary"
+-compatibility: ["kiro"]
+-tags: ["ipa", "code-quality", "analysis", "reporting", "infor"]
+---
+```
+
+After removing optional fields, IDE errors resolved and skill continued working normally.
+
+**Reference**: Compare with `ipa-client-handover` skill which uses minimal frontmatter without issues.
+- Use semantic versioning (e.g., "1.0.0", "2.0.0")
+- Specify license type ("MIT", "Apache-2.0", "Proprietary")
+- List compatibility requirements (["kiro"], ["kiro", "cursor"])
+- Add tags for categorization (["ipa", "code-quality", "analysis"])
+
+**Structure References Properly:**
+
+- Create `references/README.md` as navigation hub
+- Organize by purpose: workflow guides, troubleshooting, schemas
+- Cross-reference between files for easy navigation
+- Keep each reference focused on one topic
+
+**Reference External Knowledge:**
+
+- Skills should be self-contained but can reference steering files
+- Don't duplicate steering file content - point to it instead
+- Add "External References" section linking to relevant steering files
+- Example: "See `.kiro/steering/02_IPA_and_IPD_Complete_Guide.md` for complete IPA concepts"
+
+**Markdown Quality:**
+
+- Fix linting issues (blank lines around lists, code blocks)
+- Use consistent formatting throughout
+- Validate with markdown linter before sharing
+
+### Workspace Skills
+
+**Current Skills in This Workspace:**
+
+#### ipa-client-handover
+
+Generate professional client-facing IPA documentation with comprehensive Excel reports.
+
+**Location:** `.kiro/skills/ipa-client-handover/`
+
+**Activation:** `/ipa-client-handover` or mention "client handover", "documentation", "handover report"
+
+**Features:**
+
+- Multi-process support (1-N LPD files → ONE report)
+- Section-segmented architecture with 5 specialized subagents
+- Client-facing language (no code criticism)
+- Production-grade (extracts real data from source files)
+- Graceful degradation (works with or without specs/WU logs)
+
+**Documentation Sections:**
+
+1. Business Requirements (from ANA-050 spec)
+2. Workflow (from LPD activities)
+3. Configuration (from config variables)
+4. Activity Guide (from activities)
+5. Validation (from WU logs)
+
+**Python Tools:**
+
+- `ReusableTools/IPA_ClientHandover/organize_by_sections.py`
+- `ReusableTools/IPA_ClientHandover/merge_documentation.py`
+- `ReusableTools/IPA_ClientHandover/consolidate_processes.py`
+- `ReusableTools/IPA_ClientHandover/generate_client_handover_report.py`
+
+**Subagents:**
+
+- ipa-business-requirements-analyzer
+- ipa-workflow-analyzer
+- ipa-configuration-analyzer
+- ipa-activity-guide-generator
+- ipa-validation-analyzer
+
+**Performance:** ~2-3 min per process + consolidation
+
+**Output:** Excel report in `Client_Handover_Results/`
+
+#### ipa-coding-standards
+
+Automated IPA code quality analysis with domain-segmented review.
+
+**Location:** `.kiro/skills/ipa-coding-standards/`
+
+**Activation:** `/ipa-coding-standards` or mention "coding standards", "peer review", "code quality"
+
+**Version:** 2.0.0 (agentskills.io compliant)
+
+**Features:**
+
+- Domain-segmented analysis (Naming, JavaScript ES5, SQL, Error Handling, Structure)
+- Project standards integration (client-specific rules override defaults)
+- Stateless pipeline architecture (crash-safe, scalable)
+- One process at a time (generates ONE Excel report per process)
+- Comprehensive Excel reports with executive dashboards and action items
+
+**Analysis Domains:**
+
+1. Naming - Filename format, node captions, config set naming
+2. JavaScript - ES5 compliance, performance patterns, variable scoping
+3. SQL - Compass SQL compliance, pagination, query optimization
+4. Error Handling - OnError tabs, GetWorkUnitErrors, error coverage
+5. Structure - Auto-restart configuration, process type, activity distribution
+
+**Python Tools:**
+
+- `ReusableTools/IPA_CodingStandards/preprocess_coding_standards.py`
+- `ReusableTools/IPA_CodingStandards/build_naming_analysis.py`
+- `ReusableTools/IPA_CodingStandards/build_javascript_analysis.py`
+- `ReusableTools/IPA_CodingStandards/build_sql_analysis.py`
+- `ReusableTools/IPA_CodingStandards/build_errorhandling_analysis.py`
+- `ReusableTools/IPA_CodingStandards/assemble_coding_standards_report.py`
+
+**Subagents:**
+
+- ipa-naming-analyzer
+- ipa-javascript-analyzer
+- ipa-sql-analyzer
+- ipa-error-handling-analyzer
+- ipa-structure-analyzer
+
+**Performance:** ~8-12 min per process (stable, no crashes)
+
+**Output:** Excel report in `Coding_Standards_Results/`
+
+**Compliance:** Follows agentskills.io standard with complete frontmatter (version, license, compatibility, tags)
 
 ### Importing Skills
 
@@ -1776,6 +1989,10 @@ Subagent #3: 5 KB (cumulative: 80 KB) ← CRASH
 
 - ⚠️ User must trigger two hooks instead of one
 - ⚠️ Slightly longer workflow (two separate executions)
+
+**Historical Example**: Client Handover Documentation workflow was previously split into two hooks (`ipa-client-handover-prep.kiro.hook` and `ipa-client-handover-analyze.kiro.hook`) but has been replaced by the `ipa-client-handover` skill which uses a stateless pipeline architecture.
+
+**Current Approach**: The `ipa-client-handover` skill uses file-based state transfer (JSON files) instead of hook splitting, eliminating context accumulation entirely.
 
 #### Context Budget Planning
 

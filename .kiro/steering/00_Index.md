@@ -354,12 +354,36 @@ session state, faster navigation.
 
 ### Approval Flow Testing
 
-1. Trigger IPA (release invoice, submit for approval)
-2. IPA creates User Actions for approvers
-3. Submit approval via FSM UI
-4. Validate status change
-5. Verify expected workflow behavior
-6. Document UI errors
+**CRITICAL**: Approval workflows are ASYNCHRONOUS - IPA runs in background after submission.
+
+**Workflow**:
+
+1. Create transaction (invoice, journal, cash transaction)
+2. Submit for approval via FSM UI
+3. **Wait for approval IPA to complete** (5-10 minutes)
+4. Monitor work unit status (Process Server Administrator > Work Units)
+5. Validate status change after work unit completes
+6. Verify expected workflow behavior
+7. Document UI errors
+
+**Timeline**:
+- 0-15 seconds: Submission confirmed, status shows "Pending Approval"
+- 15 seconds - 5 minutes: Approval IPA running in background
+- 5-10 minutes: Approval IPA completes, custom fields update
+- After completion: Status changes (e.g., "Released"), custom fields populated
+
+**Validation Steps**:
+1. Navigate to Process Server Administrator > Work Units
+2. Search for approval process (by process name or transaction number)
+3. Monitor work unit status until "Completed" (use adaptive polling: 10s → 30s → 60s)
+4. Return to transaction and refresh page
+5. Verify status changed (e.g., "Pending Approval" → "Released")
+6. Verify custom fields populated (e.g., SONH Approval Status, Work Unit Reference #)
+7. Check Approval Tracking tab for approval actions
+
+**Common Issue**: Custom fields show "Unsubmitted" immediately after submission - this is NORMAL. Fields update AFTER work unit completes (5-10 minutes). Always monitor work units before concluding test failed.
+
+**Test Status**: ✅ Validated with Scenario 3.1 (EXT_FIN_004) - garnishment invoice submission successful, browser automation working end-to-end. See `SCENARIO_3.1_TEST_RESULTS.md` for details.
 
 ## Common Pitfalls to Avoid
 
@@ -438,123 +462,18 @@ Load on-demand using discloseContext tool when needed:
 
 ## Automated Testing Framework
 
-**Location**: `ReusableTools/testing_framework/`
+**DEPRECATED - DO NOT USE**
 
-**Purpose**: Automates FSM interface testing with evidence collection and TES-070 generation.
-Provides real-time progress reporting so you can see exactly what's happening during test execution.
+The Python-based testing framework in `ReusableTools/testing_framework/` is deprecated and should not be used for new testing workflows.
 
-**Key Features**:
+**Why Deprecated**:
+- Not suitable for production testing workflows
+- Does not align with modular subagent architecture vision
+- Lacks flexibility for specialized approval types
 
-- State management with `{{state.variable}}` interpolation
-- Pluggable actions and validators
-- Adaptive polling for work unit monitoring (10s → 30s → 60s)
-- Real-time progress reporting (no more "stuck" feeling)
-- Automatic screenshot capture
-- Professional TES-070 Word document generation
-- OAuth2 token management with auto-refresh
-- Unique test identifiers: `AUTOTEST_<timestamp>_<random>`
-
-**Architecture**:
-
-- Engine: TestState, StepEngine, ValidatorEngine
-- Integration: PlaywrightClient (Python Playwright), SFTPClient, FSMAPIClient, WorkUnitMonitor, CredentialManager
-- Actions: fsm_login, fsm_payables, fsm_workunits, sftp_upload, wait, api_call
-- Validators: file, workunit, api
-- Orchestration: TestOrchestrator, ApprovalExecutor, InboundExecutor
-- Evidence: ScreenshotManager, TES070Generator
-
-**Execution Methods**:
-
-1. **Via Hook** (Recommended - User-Friendly):
-   - Click "Approval Step 2: Execute Approval Tests" hook
-   - Select client and scenario file interactively
-   - Enter FSM credentials when prompted
-   - Watch real-time progress in console
-   - Browser opens on 2nd screen (visible automation)
-
-2. **Command Line** (Direct):
-   ```bash
-   python ReusableTools/run_approval_tests_v2.py --client ClientName --scenario path/to/scenario.json --environment ENV --url "FSM_URL" --username "USERNAME" --password "PASSWORD"
-   ```
-
-3. **Interactive Wrapper** (Prompts for credentials):
-   ```bash
-   python execute_approval_tests.py
-   ```
-
-**Real-Time Progress Reporting** (NEW):
-
-The framework now shows exactly what's happening as tests execute:
-
-```
-================================================================================
-SCENARIO 1/3: 3.1 - Valid Invoice Approval
-================================================================================
-
-  ⏳ Step 1.1: Login to FSM
-     ✅ PASSED
-
-  ⏳ Step 1.2: Navigate to Payables
-     ✅ PASSED
-
-  ⏳ Step 1.3: Create Invoice
-     ❌ FAILED: Element not found
-     ⚠️  Critical step failed - stopping scenario execution
-
-❌ Scenario 3.1 FAILED
-```
-
-**Benefits**:
-- See current scenario and step being executed
-- Immediate pass/fail feedback (✅/❌)
-- Error messages shown immediately with context
-- Know when tests are complete
-- No more wondering if it's stuck
-
-**Framework Redesign (March 2026)**:
-
-- ✅ Migrated from Playwright MCP to standard Python Playwright
-- ✅ Standalone execution (no Kiro dependency)
-- ✅ CSS selector-based navigation (no accessibility snapshots)
-- ✅ Multi-selector fallback strategy for reliability
-- ✅ Visible browser automation on 2nd screen
-- ✅ Headless mode for CI/CD pipelines
-- ✅ All FSM actions rewritten (fsm_login, fsm_payables, fsm_workunits)
-- ✅ Real-time progress reporting to console
-
-**State Variable Interpolation**:
-
-- `{{state.run_group}}` - Unique test identifier
-- `{{state.password}}` - FSM password from .env.passwords
-- `{{state.work_unit_id}}` - Work unit ID from wait actions
-- `{{state.uploaded_file}}` - Last uploaded filename
-- `{{state.api_record_count}}` - Record count from API calls
-- `{{TODAY_YYYYMMDD}}` - Current date (YYYYMMDD format)
-- `{{TODAY_PLUS_7_YYYYMMDD}}` - Current date + 7 days
-- `{{FSM_PORTAL_URL}}` - Mapped to `{{state.fsm_url}}`
-- `{{FSM_USERNAME}}` - Mapped to `{{state.fsm_username}}`
-
-**JSON Compatibility**:
-
-Framework accepts both field names for flexibility:
-- `interface_id` (for interface testing - INT_XXX)
-- `extension_id` (for approval testing - EXT_XXX)
-
-**Benefits**:
-
-- Token Efficiency: Manual (~50-100 MCP calls) vs Framework (load once, minimal tokens)
-- Speed: Manual (30-60 min) vs Framework (5-10 min)
-- Consistency: 100% consistent logic every time
-- Evidence: Automatic capture with proper naming
-- TES-070: Automatic generation
-- Visibility: Real-time progress reporting
-
-**Security**:
-
-- Credentials never logged or exposed
-- OAuth2 tokens auto-refresh before expiration
-- All credentials read from `Projects/{ClientName}/Credentials/` at runtime
-- Test identifiers prevent data collision
+**Current Testing Approach**:
+- Manual execution using MCP Playwright tools directly
+- Awaiting platform support for subagent tool inheritance
 
 ## Hook Interactive Pattern
 
@@ -606,106 +525,119 @@ Which client would you like to use?"
 
 **THERE ARE TWO COMPLETELY SEPARATE WORKFLOWS - DO NOT MIX THEM!**
 
-### Workflow A: APPROVAL TESTING (Consolidated Single-Hook Process) - For Enhancements (E in RICE)
+### Workflow A: APPROVAL TESTING (KIRO POWER SOLUTION) - For Enhancements (E in RICE)
 
-**Use When**: Testing approval workflows (EXT_FIN_XXX) for regression testing from existing
-TES-070 documents
+**✅ SOLUTION: FSM Approval Testing Power**
 
-**Hook**: "Run FSM Approval Regression Tests" (userTriggered)
+A Kiro Power provides automated regression testing for FSM approval workflows using existing TES-070 documents.
 
-**Architecture**: Universal hook with intelligent agent routing
-- Hook orchestrates entire workflow (parse TES-070, generate JSON, invoke subagent)
-- Hook parses TES-070 to detect transaction type
-- Hook generates EXECUTABLE JSON with MCP Playwright actions
-- Routes to appropriate specialized subagent automatically
-- Subagent uses MCP Playwright tools directly (NOT Python framework)
-- Validates subagent exists before execution
-- Supports multiple approval types (ExpenseInvoice, ManualJournal, CashLedgerTransaction)
+**How It Works**:
+- Power activates via keywords ("FSM approval testing", "TES-070", "approval workflow")
+- Parent agent uses Kiro's built-in MCP Playwright tools (no subagent delegation)
+- Power provides instructions and workflows via POWER.md and steering files
+- Agent executes tests directly with full MCP tool access
 
-**Complete Workflow**:
+**Why This Works**:
+- ✅ Powers provide MCP tools to parent agent (not subagents)
+- ✅ No tool inheritance problem (parent has direct access)
+- ✅ Modular structure (power bundles everything)
+- ✅ Dynamic activation (keywords trigger loading)
 
-1. **User Triggers Hook**: Click "Run FSM Approval Regression Tests"
+**Power Location**: `powers/fsm-approval-testing/`
 
-2. **Phase 1: Gather Information**
-   - Hook lists clients in `Projects/` - user selects
-   - Hook lists TES-070 documents in `Projects/{Client}/TES-070/Approval_TES070s_For_Regression_Testing/` - user selects
-   - Hook prompts for FSM credentials (URL, username, password, environment)
-   - Hook saves credentials to `Projects/{Client}/Credentials/` (.env.fsm and .env.passwords)
+**Power Structure**:
+- `POWER.md` - Power metadata, instructions, workflows
+- `steering/tes070-parsing.md` - TES-070 parsing workflow
+- `steering/test-execution.md` - Test execution with browser automation
+- `steering/evidence-collection.md` - Screenshot and evidence capture
+- `README.md` - Installation and usage guide
 
-3. **Phase 2: Parse TES-070 and Detect Transaction Type**
-   - Hook runs: `python ReusableTools/tes070_analyzer.py "<tes070_path>"`
-   - Hook reads generated `*_analysis.json` file
-   - Hook extracts transaction type (ExpenseInvoice, ManualJournal, CashLedgerTransaction)
-   - Hook maps transaction type to specialized subagent:
-     * ExpenseInvoice → invoice-approval-test-agent ✅
-     * ManualJournal → journal-approval-test-agent ❌ (not yet created)
-     * CashLedgerTransaction → cash-approval-test-agent ❌ (not yet created)
+**Installation**:
+1. Open Powers panel (⚡ icon)
+2. Click "Add power from Local Path"
+3. Select `powers/fsm-approval-testing/`
+4. Click Install
 
-4. **Phase 3: Validate Subagent Exists**
-   - Hook checks if required subagent exists in `.kiro/agents/`
-   - If missing: Display error, list available agents, stop execution
-   - If exists: Continue to Phase 4
+**Usage**:
+Simply mention keywords in your request:
+```
+Test the expense invoice approval workflow using TES-070 document EXT_FIN_004
+```
 
-5. **Phase 4: Generate Executable JSON Scenarios**
-   - Hook creates EXECUTABLE JSON scenario file with proper MCP Playwright action definitions
-   - Hook uses TES-070 analysis to understand test scenarios
-   - Hook generates JSON with actions: `mcp_playwright_browser_navigate`, `mcp_playwright_browser_click`, `mcp_playwright_browser_type`, `mcp_playwright_browser_snapshot`, `mcp_playwright_browser_take_screenshot`
-   - Hook saves to: `Projects/{Client}/TestScripts/approval/{extension_id}_executable_scenarios.json`
-   - Hook validates JSON using: `python ReusableTools/validate_json.py`
+Power activates automatically and guides through workflow phases.
 
-6. **Phase 5: Invoke Specialized Testing Subagent**
-   - Hook invokes subagent with prompt containing:
-     * TES-070 Analysis path
-     * Executable Scenarios path
-     * FSM credentials (URL, username, password, environment)
-   - Subagent uses MCP Playwright tools to:
-     * Navigate FSM UI
-     * Create and submit invoices
-     * Perform approvals/rejections
-     * Capture screenshots at each step
-     * Generate TES-070 report with evidence
+**Workflow Phases**:
 
-7. **Phase 6: Display Summary**
-   - Hook shows final summary with pass/fail counts, TES-070 path, evidence location
-   - Output: `Projects/{Client}/TES-070/Generated_TES070s/TES-070_{timestamp}_{EXT_ID}.docx`
+1. **Phase 1: Parse TES-070 Document**
+   - Run `python ReusableTools/tes070_analyzer.py "<tes070_path>"`
+   - Extract document metadata, test summary, scenarios
+   - Identify transaction type (ExpenseInvoice, ManualJournal, CashLedgerTransaction)
+   - Output: `*_analysis.json`
+
+2. **Phase 2: Create Test Instructions**
+   - Run `python ReusableTools/create_test_instructions.py`
+   - Extract executable scenarios (skip TOC entries)
+   - Create simplified test instructions JSON
+   - Validate JSON structure
+   - Output: `Projects/{Client}/TestScripts/approval/{extension_id}_test_instructions.json`
+
+3. **Phase 3: Execute Tests**
+   - Load FSM credentials from `Projects/{Client}/Credentials/`
+   - For each scenario:
+     * Launch browser (keep open across scenarios)
+     * Navigate to FSM portal and login
+     * Execute test steps using MCP Playwright tools
+     * Take snapshots before actions (find element refs)
+     * Capture screenshots after critical steps
+     * Validate results against expected outcomes
+   - Close browser after all scenarios complete
+   - Output: `Projects/{Client}/Temp/evidence/{scenario_id}/`
+
+4. **Phase 4: Report Results**
+   - Display summary (total, passed, failed, pass rate)
+   - List evidence locations
+   - Document any errors or issues
+
+**Supported Approval Types**:
+- Expense Invoice Approval (Payables) - EXT_FIN_004 and similar
+- Manual Journal Approval (General Ledger) - EXT_FIN_001 and similar
+- Cash Ledger Transaction Approval (Cash Management) - EXT_FIN_016 and similar
+
+**MCP Playwright Tools Used**:
+- `mcp_playwright_browser_navigate` - Navigate to URLs
+- `mcp_playwright_browser_snapshot` - Capture page structure (find elements)
+- `mcp_playwright_browser_click` - Click elements
+- `mcp_playwright_browser_type` - Type text into fields
+- `mcp_playwright_browser_fill_form` - Fill multiple form fields
+- `mcp_playwright_browser_take_screenshot` - Capture evidence
+- `mcp_playwright_browser_wait_for` - Wait for elements/text
+
+**Note**: These tools are built into Kiro - no external MCP server needed.
 
 **Key Characteristics**:
-
-- ONE HOOK for ALL approval types (universal entry point)
-- Hook orchestrates everything (parse, generate JSON, invoke subagent)
-- Subagent uses MCP Playwright tools directly (NOT Python testing framework)
-- Intelligent routing based on transaction type detection
-- Specialized subagents for each approval type
-- Starts with EXISTING TES-070 document (regression testing)
-- Tests ENHANCEMENTS (approval workflows, IPA + LPL)
-- Extension IDs start with "EXT_" (e.g., EXT_FIN_004)
-- No test data generation needed (uses live FSM data)
-- Subagent generates TES-070 automatically with embedded screenshots
-- Real-time progress reporting
-- Immediate pass/fail feedback for each step
-- Extensible: Add new agents without changing hook
-
-**Currently Available Subagents**:
-
-- ✅ invoice-approval-test-agent: ExpenseInvoice approval workflows (Payables module) - Uses MCP Playwright
-- ❌ journal-approval-test-agent: ManualJournal approval workflows (GL module) - Not yet created
-- ❌ cash-approval-test-agent: CashLedgerTransaction approval workflows (Cash module) - Not yet created
+- ✅ Power-based solution (modular, shareable)
+- ✅ Parent agent executes (full MCP tool access)
+- ✅ Dynamic activation (keywords)
+- ✅ Starts with EXISTING TES-070 document (regression testing)
+- ✅ Tests ENHANCEMENTS (approval workflows, IPA + LPL)
+- ✅ Extension IDs start with "EXT_" (e.g., EXT_FIN_004)
+- ✅ No test data generation needed (uses live FSM data)
 
 **File Locations**:
-
+- Power: `powers/fsm-approval-testing/`
 - Input TES-070: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*.docx`
 - TES-070 Analysis: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*_analysis.json`
-- Executable Scenarios: `Projects/{ClientName}/TestScripts/approval/{extension_id}_executable_scenarios.json`
-- Evidence Screenshots: `Projects/{ClientName}/Temp/evidence/`
-- Output TES-070: `Projects/{ClientName}/TES-070/Generated_TES070s/`
-- Subagents: `.kiro/agents/{agent-name}.md`
+- Test Instructions: `Projects/{ClientName}/TestScripts/approval/{extension_id}_test_instructions.json`
+- Evidence Screenshots: `Projects/{ClientName}/Temp/evidence/{scenario_id}/`
 
-**Critical Notes**:
+**Testing Status**: ✅ Validated - Successfully executed Scenario 3.1 (garnishment auto-approval) on 2026-03-10. Browser automation, FSM navigation, invoice creation, and submission all working correctly. See `SCENARIO_3.1_TEST_RESULTS.md` for complete test results.
 
-- Subagent MUST use MCP Playwright tools (mcp_playwright_browser_*), NOT Python testing framework
-- Hook generates executable JSON with MCP Playwright actions, NOT framework actions
-- Subagent captures screenshots and generates TES-070 directly
-- Python testing framework (`run_approval_tests_v2.py`) is NOT used in this workflow
+**Key Learning**: Approval workflows are asynchronous. After submission, approval IPA runs in background (5-10 minutes). Always monitor work units to verify completion before validating approval status. Custom fields (SONH Approval Status, Work Unit Reference #) update AFTER work unit completes.
+
+**Historical Context**:
+- Previous attempts (Python framework, subagent routing) failed due to MCP tool access limitations
+- Kiro Power solution solves this by providing tools to parent agent
+- See `APPROVAL_TESTING_SOLUTIONS_HISTORY.md` for complete history
 
 ---
 
