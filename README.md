@@ -53,8 +53,9 @@ Automated_Testing/
 │
 ├── ReusableTools/         # Shared Python utilities
 │   ├── new_project_setup.py      # New project provisioning
-│   ├── tes070_generator.py       # TES-070 document generator
-│   ├── generate_tes070_from_json.py  # JSON to TES-070
+│   ├── tes070_generator.py       # TES-070 document generator (core module)
+│   ├── generate_tes070_from_json.py  # JSON to TES-070 (interface testing)
+│   ├── generate_regression_tes070.py # Regression TES-070 (approval testing)
 │   ├── tes070_analyzer.py        # TES-070 analyzer
 │   ├── test_scenario_builder_modern.py  # Modern GUI builder
 │   └── automation_examples/      # Playwright examples
@@ -142,8 +143,15 @@ See [QUICK_START_GUIDE.md](QUICK_START_GUIDE.md) and [docs/PROJECT_PROVISIONING.
 
 ### TES-070 Generator
 Generate TES-070 documents from JSON:
+
+**For Interface Testing (INT_FIN_XXX):**
 ```bash
 python ReusableTools/generate_tes070_from_json.py Projects/{ClientName}/TestScripts/inbound/{interface_id}_test_scenarios.json
+```
+
+**For Approval Testing Regression (EXT_FIN_XXX):**
+```bash
+python ReusableTools/generate_regression_tes070.py Projects/{ClientName}/Temp/test_results_{extension_id}.json
 ```
 
 ### TES-070 Analyzer

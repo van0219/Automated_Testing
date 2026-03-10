@@ -120,10 +120,17 @@ SFTP_OUTBOUND_PATH={sftp_outbound_path}
     # Create README.md
     readme_content = f"""# {client_name} Project
 
+## Client Information
+- **Client Code:** {client_name}
+- **Client Name:** {client_name}
+- **Created:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+**Note:** If the full client name is different from the client code (e.g., "SONH" vs "State of New Hampshire"), 
+update the Client Name field above. The Client Code is used for folder paths, while the Client Name is used 
+for display in TES-070 documents.
+
 ## Overview
 This folder contains all testing artifacts for the {client_name} FSM implementation.
-
-**Created:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 ## Tenant Information
 - **Tenant ID:** {tenant_id}
@@ -281,9 +288,10 @@ def interactive_setup():
         
         print("\n⚠️  Next Steps:")
         print("   1. Verify credentials in Credentials/ folder")
-        print("   2. Add .ionapi file if using ION API")
-        print("   3. NEVER commit credential files to git!")
-        print("   4. Use Test Scenario Builder to create test scenarios")
+        print("   2. Update Client Name in README.md if different from Client Code")
+        print("   3. Add .ionapi file if using ION API")
+        print("   4. NEVER commit credential files to git!")
+        print("   5. Use Test Scenario Builder to create test scenarios")
     else:
         print(f"\n❌ Error: {result['error']}")
 

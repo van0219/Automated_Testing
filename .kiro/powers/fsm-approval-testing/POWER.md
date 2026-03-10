@@ -238,19 +238,62 @@ Expected: Journal should route to Agency approver and be approved
 
 ### Phase 3: Execute Tests
 
-1. Power loads FSM credentials
-2. For each scenario in test instructions:
+**CRITICAL: Load Client Metadata First**
+
+Before executing tests, load client metadata from the project README:
+
+```python
+from ReusableTools.read_client_metadata import get_client_metadata
+
+metadata = get_client_metadata("SONH")
+client_code = metadata['client_code']        # "SONH"
+client_name = metadata['client_name']        # "State of New Hampshire"
+tenant_id = metadata['tenant_id']            # "NMR2N66J9P445R7P_AX4"
+```
+
+This ensures the test results JSON has the correct `client` (short code) and `client_name` (full name) for TES-070 generation.
+
+**CRITICAL: Use TES-070 Values - Don't Ask User**
+
+For regression testing, the TES-070 document contains ALL the values you need (accounts, vendors, amounts, codes, etc.). Use these values directly without asking the user.
+
+**ONLY ask the user if:**
+- A TES-070 value causes an FSM error (e.g., "Account 12345 is invalid")
+- A required field is not specified in TES-070
+- You encounter an unexpected validation error
+
+**Execution Steps:**
+
+1. Load client metadata using `read_client_metadata.py`
+2. Load FSM credentials from `Projects/{client}/Credentials/`
+3. For each scenario in test instructions:
    - Launch browser (if not already open)
    - Navigate to FSM portal
    - Login with credentials
    - Execute test steps using MCP Playwright tools
+   - **Use exact values from TES-070** (accounts, vendors, amounts, codes)
    - Take snapshots before each action (find element refs)
    - Capture screenshots after critical steps
    - Validate results against expected outcomes
 3. Keep browser open across scenarios (efficiency)
 4. Close browser after all scenarios complete
 
-**Evidence**: `Projects/{Client}/Temp/evidence/{scenario_id}/`
+**Output**: `Projects/{Client}/Temp/test_results_{extension_id}.json`
+
+**Test Results JSON Structure:**
+```json
+{
+  "extension_id": "EXT_FIN_004",
+  "client": "SONH",                    // Short code for folder paths
+  "client_name": "State of New Hampshire",  // Full name for TES-070 display
+  "test_date": "2026-03-10",
+  "tester": "Automated Testing (Kiro)",
+  "environment": "NMR2N66J9P445R7P_AX4",
+  "scenarios": [...]
+}
+```
+
+**CRITICAL**: Always load client metadata from README using `read_client_metadata.py` to get the correct `client_name`.
 
 ### Phase 4: Report Results
 
@@ -261,6 +304,26 @@ Expected: Journal should route to Agency approver and be approved
    - Pass rate percentage
 2. List evidence locations
 3. Document any errors or issues
+
+### Phase 5: Generate Updated TES-070 Document
+
+1. Prepare test results JSON from Phase 3 execution data
+2. Run `generate_regression_tes070.py` with test results
+3. Generate Word document with:
+   - Updated test summary (Pass/Fail statistics)
+   - All test scenarios with current results
+   - Embedded evidence screenshots
+   - Expected vs Actual comparisons
+   - Work unit references
+   - Execution metadata (date, tester, environment)
+4. Validate document completeness
+5. Report generation results to user
+
+**Output**: `Projects/{Client}/TES-070/Generated_TES070s/{client}_{extension_id}_Regression_{timestamp}.docx`
+
+**Purpose**: Provide stakeholders with updated TES-070 document showing current state of approval workflow testing. Even though original TES-070 exists, it may be outdated - this creates fresh documentation with latest test results.
+
+**Note**: For interface testing (INT_FIN_XXX), use `generate_tes070_from_json.py` instead. For approval testing regression (EXT_FIN_XXX), use `generate_regression_tes070.py`.
 
 ## MCP Playwright Tools
 
@@ -343,8 +406,7 @@ Detailed workflow guides available in `steering/` directory:
 - `tes070-parsing.md` - Parse TES-070 documents and extract scenarios
 - `test-execution.md` - Execute test scenarios with browser automation
 - `evidence-collection.md` - Capture screenshots and document results
-- `fsm-navigation.md` - Navigate FSM UI (login, roles, modules)
-- `work-unit-monitoring.md` - Monitor work unit status and completion
+- `tes070-generation.md` - Generate updated TES-070 documents with test results
 
 ## Best Practices
 
@@ -355,6 +417,9 @@ Detailed workflow guides available in `steering/` directory:
 - **Use multi-selector fallback** - Try multiple selectors for reliability
 - **Wait for elements** - Don't assume instant page loads
 - **Handle iframes** - FSM uses iframes for application content
+- **Skip read-only fields** - Never attempt to populate disabled/read-only fields
+- **Use lookup buttons** - For editable fields with lookups, use the lookup button instead of typing directly
+- **Monitor approval workflows** - Approval IPAs are asynchronous, always monitor work units before validating results
 
 ### Evidence Collection
 
@@ -388,13 +453,17 @@ Detailed workflow guides available in `steering/` directory:
 
 - TES-070 Analysis: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*_analysis.json`
 - Test Instructions: `Projects/{ClientName}/TestScripts/approval/{extension_id}_test_instructions.json`
+- Test Results JSON: `Projects/{ClientName}/Temp/test_results_{extension_id}.json`
 - Evidence Screenshots: `Projects/{ClientName}/Temp/evidence/{scenario_id}/`
+- Updated TES-070 Document: `Projects/{ClientName}/TES-070/Generated_TES070s/{client}_{extension_id}_Regression_{timestamp}.docx`
 
 ### Python Tools
 
 - `ReusableTools/tes070_analyzer.py` - Parse TES-070 documents
 - `ReusableTools/create_test_instructions.py` - Generate test instructions
 - `ReusableTools/validate_json.py` - Validate JSON files
+- `ReusableTools/read_client_metadata.py` - Read client metadata from project README
+- `ReusableTools/generate_regression_tes070.py` - Generate updated TES-070 documents from test results
 
 ## Security Notes
 
@@ -451,10 +520,36 @@ Detailed workflow guides available in `steering/` directory:
 2. Navigate to Process Server Administrator > Work Units
 3. Search for approval process (by process name or invoice number)
 4. Monitor work unit status until "Completed" (use adaptive polling)
-5. Return to invoice and refresh page
-6. Verify custom fields now populated (SONH Approval Status, Work Unit Reference #)
+5. Return to invoice form
+6. Click "Refresh" button in form toolbar (do NOT refresh entire browser)
+7. Verify custom fields now populated (SONH Approval Status, Work Unit Reference #)
 
-**Key Learning**: Always monitor work units for approval workflows. Custom fields update AFTER work unit completes, not immediately after submission.
+**Key Learning**: Always monitor work units for approval workflows. Custom fields update AFTER work unit completes, not immediately after submission. Fields showing "Unsubmitted" or blank immediately after submission is NORMAL behavior.
+
+### Read-Only Field Errors (CRITICAL)
+
+**Symptom**: Errors when trying to populate certain fields, or fields don't accept input
+
+**Cause**: Attempting to populate read-only or disabled fields
+
+**Common Read-Only Fields**:
+- **Voucher** - Auto-generated by FSM
+- **Status** - Controlled by workflow
+- **Total Distributions** - Calculated from distribution lines
+- **Total Payments** - Calculated from payment lines
+- **Balance** - Calculated field
+- **Work Unit Reference #** - Populated by approval IPA
+
+**Solution**:
+1. Take snapshot before attempting to populate field
+2. Check field attributes in snapshot:
+   - `[disabled]` attribute = read-only
+   - `paragraph` element = display-only (not editable)
+   - `textbox` or `combobox` = editable
+3. Skip read-only fields entirely - do NOT attempt to populate
+4. For editable fields with lookups, use lookup button instead of typing directly
+
+**Key Learning**: If a field is read-only, skip it entirely. Check snapshot for field type before attempting to populate. Use lookup buttons for editable fields.
 
 ### Invoice Out of Balance
 
@@ -541,6 +636,33 @@ Test the expense invoice approval workflow using TES-070 document EXT_FIN_004
 - `.kiro/steering/08_TES070_Standards_and_Generation.md` - TES-070 standards
 
 ## Version History
+
+- **1.1.2** (2026-03-10) - Client metadata management
+  - Added `read_client_metadata.py` utility to read client info from project README
+  - Fixed root cause: client_name now loaded from README during test execution (Phase 3)
+  - Updated SONH README with Client Information section (client code + full name)
+  - Phase 3 now loads metadata before test execution to ensure correct TES-070 generation
+  - Prevents "State of New Hampshire" folder creation issue (use short code for paths)
+  - Test results JSON now correctly populates both `client` (short) and `client_name` (full)
+
+- **1.1.1** (2026-03-10) - Test execution learnings and best practices
+  - Added Rule 8: Approval Workflows Are Asynchronous (CRITICAL)
+  - Added Rule 6: Skip Read-Only Fields (CRITICAL) to FSM Navigation Guide
+  - Added read-only field troubleshooting section
+  - Documented approval workflow timeline (0-15s submission, 5-10min completion)
+  - Added validation steps for approval workflows
+  - Clarified custom field update behavior (updates AFTER work unit completes)
+  - Added common read-only fields list (Voucher, Status, calculated totals)
+  - Improved best practices for browser automation
+  - Validated with Scenario 3.1 (garnishment invoice auto-approval)
+
+- **1.1.0** (2026-03-10) - TES-070 generation capability added
+  - Added Phase 5: Generate Updated TES-070 Document
+  - Created `tes070-generation.md` steering file with complete workflow
+  - Captures test results JSON during execution (Phase 3)
+  - Generates Word document with embedded screenshots and Pass/Fail status
+  - Provides stakeholders with updated regression test documentation
+  - Output: `Projects/{Client}/TES-070/Generated_TES070s/{client}_{extension_id}_Regression_{timestamp}.docx`
 
 - **1.0.2** (2026-03-10) - Navigation improvements and troubleshooting
   - Added detailed Process Server Administrator navigation methods (portal, role switcher, settings)

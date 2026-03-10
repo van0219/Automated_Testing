@@ -34,9 +34,9 @@ Updated FSM Approval Testing Power documentation and workspace steering files ba
 - ⚠️ Approval validation incomplete (need work unit monitoring)
 - ⚠️ Insufficient wait time for async approval process
 
-### 2. powers/fsm-approval-testing/steering/test-execution.md (UPDATED)
+### 2. .kiro/powers/fsm-approval-testing/steering/test-execution.md (UPDATED)
 
-**Location**: `powers/fsm-approval-testing/steering/test-execution.md`
+**Location**: `.kiro/powers/fsm-approval-testing/steering/test-execution.md`
 
 **Changes**:
 
@@ -84,9 +84,9 @@ Added 5 new issues based on test execution:
 5. **Work unit not found** (enhanced)
    - Added search tips and troubleshooting
 
-### 3. powers/fsm-approval-testing/POWER.md (UPDATED)
+### 3. .kiro/powers/fsm-approval-testing/POWER.md (UPDATED)
 
-**Location**: `powers/fsm-approval-testing/POWER.md`
+**Location**: `.kiro/powers/fsm-approval-testing/POWER.md`
 
 **Changes**:
 
@@ -122,9 +122,9 @@ Added version 1.0.1 (2026-03-10):
 - Added validation timeline
 - Improved troubleshooting with real-world scenarios
 
-### 4. powers/fsm-approval-testing/README.md (UPDATED)
+### 4. .kiro/powers/fsm-approval-testing/README.md (UPDATED)
 
-**Location**: `powers/fsm-approval-testing/README.md`
+**Location**: `.kiro/powers/fsm-approval-testing/README.md`
 
 **Changes**:
 
@@ -309,8 +309,8 @@ Added test status and key learning:
 For complete details, review these files:
 
 1. `SCENARIO_3.1_TEST_RESULTS.md` - Complete test execution report
-2. `powers/fsm-approval-testing/steering/test-execution.md` - Updated test execution workflow
-3. `powers/fsm-approval-testing/POWER.md` - Updated power documentation
+2. `.kiro/powers/fsm-approval-testing/steering/test-execution.md` - Updated test execution workflow
+3. `.kiro/powers/fsm-approval-testing/POWER.md` - Updated power documentation
 4. `.kiro/steering/00_Index.md` - Updated workspace index with approval testing guidance
 
 ## Next Steps

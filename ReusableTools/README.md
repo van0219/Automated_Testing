@@ -138,7 +138,7 @@ upload_file('test_data/GLTRANSREL_valid.csv', '/Infor_FSM/Inbound/', creds)
 
 ### JSON to TES-070 Converter
 
-**generate_tes070_from_json.py** - Convert test scenario JSON to TES-070 .docx
+**generate_tes070_from_json.py** - Convert test scenario JSON to TES-070 .docx (Interface Testing)
 - Integrates screenshots from test execution
 - Part of 4-step TES-070 workflow (Interface Step 3: Generate TES-070)
 - Reads JSON from `Projects/{ClientName}/TestScripts/{interface_type}/`
@@ -146,6 +146,17 @@ upload_file('test_data/GLTRANSREL_valid.csv', '/Infor_FSM/Inbound/', creds)
 
 ```bash
 python ReusableTools/generate_tes070_from_json.py Projects/StateOfNewHampshire/TestScripts/inbound/INT_FIN_013_test_scenarios.json
+```
+
+**generate_regression_tes070.py** - Generate regression TES-070 from test results (Approval Testing)
+- Generates updated TES-070 with Pass/Fail status from test execution
+- Part of 5-phase FSM Approval Testing Power workflow (Phase 5)
+- Reads test results JSON from `Projects/{ClientName}/Temp/`
+- Embeds evidence screenshots automatically
+- Outputs to `Projects/{ClientName}/TES-070/Generated_TES070s/`
+
+```bash
+python ReusableTools/generate_regression_tes070.py Projects/SONH/Temp/test_results_EXT_FIN_004.json
 ```
 
 ## Document Analysis Tools
@@ -177,7 +188,15 @@ These tools support the complete testing workflow:
 2. **Interface Step 0: Generate Test Data** → `fsm_field_discovery.py` + `test_data_generator.py`
 3. **Interface Step 1: Define Test Scenarios** → `test_scenario_builder_modern.py`
 4. **Interface Step 2: Execute Tests in FSM** → `sftp_helper.py` + Playwright automation
-5. **Interface Step 3: Generate TES-070** → `generate_tes070_from_json.py`
+5. **Interface Step 3: Generate TES-070** → `generate_tes070_from_json.py` (interface testing)
+
+**For Approval Testing (5-Phase Workflow)**:
+
+1. **Phase 1: Parse TES-070** → `tes070_analyzer.py`
+2. **Phase 2: Create Test Instructions** → `create_test_instructions.py`
+3. **Phase 3: Execute Tests** → MCP Playwright browser automation
+4. **Phase 4: Report Results** → Console summary
+5. **Phase 5: Generate TES-070** → `generate_regression_tes070.py` (approval testing)
 
 ## Usage
 

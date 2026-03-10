@@ -179,8 +179,8 @@ If validation fails:
 
 ## Related Files
 
-- `powers/fsm-approval-testing/POWER.md` - Power documentation (needs update)
-- `powers/fsm-approval-testing/steering/test-execution.md` - Test execution workflow (needs update)
+- `.kiro/powers/fsm-approval-testing/POWER.md` - Power documentation (needs update)
+- `.kiro/powers/fsm-approval-testing/steering/test-execution.md` - Test execution workflow (needs update)
 - `.kiro/steering/00_Index.md` - Workspace overview (may need update)
 
 ## Status

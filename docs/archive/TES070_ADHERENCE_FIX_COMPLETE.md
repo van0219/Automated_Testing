@@ -19,7 +19,7 @@ This instruction was TOO VAGUE and gave agent permission to INTERPRET rather tha
 
 ## Files Updated
 
-### 1. powers/fsm-approval-testing/POWER.md
+### 1. .kiro/powers/fsm-approval-testing/POWER.md
 
 Added CRITICAL RULE section at top of Workflow:
 
@@ -37,7 +37,7 @@ Includes:
 - What NOT to do (6 anti-patterns)
 - Validation after each step
 
-### 2. powers/fsm-approval-testing/steering/test-execution.md
+### 2. .kiro/powers/fsm-approval-testing/steering/test-execution.md
 
 Replaced section "4.2 Interpret Test Steps" with "4.2 Follow Test Steps EXACTLY (CRITICAL)":
 
@@ -181,8 +181,8 @@ Before considering this fix complete:
 
 ## Related Files
 
-- `powers/fsm-approval-testing/POWER.md` - Power documentation (UPDATED)
-- `powers/fsm-approval-testing/steering/test-execution.md` - Test execution workflow (UPDATED)
+- `.kiro/powers/fsm-approval-testing/POWER.md` - Power documentation (UPDATED)
+- `.kiro/powers/fsm-approval-testing/steering/test-execution.md` - Test execution workflow (UPDATED)
 - `.kiro/steering/00_Index.md` - Workspace overview (UPDATED)
 - `CRITICAL_ISSUE_TES070_STEP_ADHERENCE.md` - Detailed issue analysis (NEW)
 
@@ -229,8 +229,8 @@ For **NET NEW TESTING** (testing new functionality with generic test scripts fro
 ### Documentation Updated
 
 All files now distinguish between these two modes:
-- `powers/fsm-approval-testing/POWER.md` - Added "Testing Modes" section
-- `powers/fsm-approval-testing/steering/test-execution.md` - Added mode distinction
+- `.kiro/powers/fsm-approval-testing/POWER.md` - Added "Testing Modes" section
+- `.kiro/powers/fsm-approval-testing/steering/test-execution.md` - Added mode distinction
 - `.kiro/steering/00_Index.md` - Added mode notes in workflow
 
 ### Key Takeaway

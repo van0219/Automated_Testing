@@ -46,11 +46,22 @@ functionality, not developing new IPA processes or integrations.
 - `fsm_field_discovery.py` - Query FSM API for valid field names
 - `test_data_generator.py` - Generate test data
 - `test_scenario_builder_modern.py` - GUI for creating test scenarios
-- `generate_tes070_from_json.py` - Convert JSON to TES-070 documents
+- `generate_tes070_from_json.py` - Convert JSON to TES-070 documents (interface testing)
+- `generate_regression_tes070.py` - Generate regression TES-070 from test results (approval testing)
 - `tes070_analyzer.py` - Analyze existing TES-070 documents
 - `sftp_helper.py` - SFTP operations
 - `testing_framework/` - Automated testing framework
 - `automation_examples/` - Playwright automation examples
+
+### Kiro Configuration
+
+`.kiro/` - Kiro-specific configuration and automation:
+
+- `steering/` - Steering files (always-on context, project standards)
+- `skills/` - Workspace-specific skills (reusable workflows)
+- `hooks/` - Event-driven automation hooks
+- `powers/` - Workspace-specific powers (MCP tools + workflows)
+- `settings/` - Kiro settings (mcp.json, etc.)
 
 ### File Organization Rules
 
@@ -60,6 +71,10 @@ functionality, not developing new IPA processes or integrations.
 - Reusable utilities → `ReusableTools/`
 - Documentation screenshots → `docs/screenshots/`
 - Test execution screenshots → `Projects/{ClientName}/Temp/`
+- Kiro steering files → `.kiro/steering/`
+- Kiro skills → `.kiro/skills/`
+- Kiro hooks → `.kiro/hooks/`
+- Kiro powers → `.kiro/powers/`
 
 ## Communication Style
 
@@ -546,19 +561,22 @@ A Kiro Power provides automated regression testing for FSM approval workflows us
 - ✅ Modular structure (power bundles everything)
 - ✅ Dynamic activation (keywords trigger loading)
 
-**Power Location**: `powers/fsm-approval-testing/`
+**Power Location**: `.kiro/powers/fsm-approval-testing/`
+
+**IMPORTANT**: All workspace-specific powers should be created in `.kiro/powers/` directory for consistency with other Kiro features (steering files in `.kiro/steering/`, skills in `.kiro/skills/`, hooks in `.kiro/hooks/`).
 
 **Power Structure**:
 - `POWER.md` - Power metadata, instructions, workflows
 - `steering/tes070-parsing.md` - TES-070 parsing workflow
 - `steering/test-execution.md` - Test execution with browser automation
 - `steering/evidence-collection.md` - Screenshot and evidence capture
+- `steering/tes070-generation.md` - Generate updated TES-070 documents with test results
 - `README.md` - Installation and usage guide
 
 **Installation**:
 1. Open Powers panel (⚡ icon)
 2. Click "Add power from Local Path"
-3. Select `powers/fsm-approval-testing/`
+3. Select `.kiro/powers/fsm-approval-testing/`
 4. Click Install
 
 **Usage**:
@@ -589,6 +607,7 @@ Power activates automatically and guides through workflow phases.
 3. **Phase 3: Execute Tests**
    - **REGRESSION TESTING**: Follow TES-070 test steps EXACTLY as written - DO NOT interpret, DO NOT deviate, DO NOT create your own steps
    - **NET NEW TESTING**: Use your knowledge and instincts to execute tests based on generic test script objectives
+   - **CRITICAL**: Use TES-070 values directly (accounts, vendors, amounts, codes) - ONLY ask user if FSM rejects a value or shows an error
    - Load FSM credentials from `Projects/{Client}/Credentials/`
    - For each scenario:
      * Launch browser (keep open across scenarios)
@@ -597,6 +616,8 @@ Power activates automatically and guides through workflow phases.
        - If TES-070 says "Staff Accountant role" → Use "Staff Accountant" (NOT "Global Ledger" or similar)
        - If TES-070 says "Process Journals > Create" → Navigate to exactly "Process Journals" then "Create"
        - If TES-070 says "amount below $1,000" → Use $999.99 or $500.00 (NOT $1,000 or more)
+       - If TES-070 says "Account 6010-100-1000" → Use that exact account (don't ask user)
+       - If TES-070 says "Vendor V12345" → Use that exact vendor (don't ask user)
      * **NET NEW**: Interpret scenario objectives and create appropriate test steps using FSM knowledge
      * Take snapshots before actions (find element refs)
      * Capture screenshots after critical steps
@@ -609,6 +630,19 @@ Power activates automatically and guides through workflow phases.
    - Display summary (total, passed, failed, pass rate)
    - List evidence locations
    - Document any errors or issues
+
+5. **Phase 5: Generate Updated TES-070 Document**
+   - Prepare test results JSON from Phase 3 execution data
+   - Run `python ReusableTools/generate_regression_tes070.py`
+   - Generate Word document with:
+     * Updated test summary (Pass/Fail statistics)
+     * All test scenarios with current results
+     * Embedded evidence screenshots
+     * Expected vs Actual comparisons
+     * Work unit references
+     * Execution metadata (date, tester, environment)
+   - Output: `Projects/{Client}/TES-070/Generated_TES070s/{client}_{extension_id}_Regression_{timestamp}.docx`
+   - Purpose: Provide stakeholders with updated TES-070 showing current state of testing
 
 **Supported Approval Types**:
 - Expense Invoice Approval (Payables) - EXT_FIN_004 and similar
@@ -640,7 +674,9 @@ Power activates automatically and guides through workflow phases.
 - Input TES-070: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*.docx`
 - TES-070 Analysis: `Projects/{ClientName}/TES-070/Approval_TES070s_For_Regression_Testing/*_analysis.json`
 - Test Instructions: `Projects/{ClientName}/TestScripts/approval/{extension_id}_test_instructions.json`
+- Test Results JSON: `Projects/{ClientName}/Temp/test_results_{extension_id}.json`
 - Evidence Screenshots: `Projects/{ClientName}/Temp/evidence/{scenario_id}/`
+- Updated TES-070: `Projects/{ClientName}/TES-070/Generated_TES070s/{client}_{extension_id}_Regression_{timestamp}.docx`
 
 **Testing Status**: ✅ Validated - Successfully executed Scenario 3.1 (garnishment auto-approval) on 2026-03-10. Browser automation, FSM navigation, invoice creation, and submission all working correctly. See `SCENARIO_3.1_TEST_RESULTS.md` for complete test results.
 

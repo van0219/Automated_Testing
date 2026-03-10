@@ -67,12 +67,31 @@ Your approach:
 
 The following workflow applies to REGRESSION TESTING with existing TES-070 documents.
 
-### Step 1: Load Test Instructions
+### Step 1: Load Client Metadata and Test Instructions
+
+**CRITICAL: Load Client Metadata First**
+
+Before loading test instructions, read client metadata from project README:
+
+```python
+from ReusableTools.read_client_metadata import get_client_metadata
+
+metadata = get_client_metadata("SONH")
+client_code = metadata['client_code']        # "SONH" (for folder paths)
+client_name = metadata['client_name']        # "State of New Hampshire" (for TES-070 display)
+tenant_id = metadata['tenant_id']            # "NMR2N66J9P445R7P_AX4"
+```
+
+**Why This Matters:**
+- `client_code` is used for folder paths (e.g., `Projects/SONH/`)
+- `client_name` is used for TES-070 document display (e.g., "State of New Hampshire")
+- Prevents folder creation issues (e.g., creating `Projects/State of New Hampshire/` instead of `Projects/SONH/`)
+- Ensures test results JSON has correct metadata for TES-070 generation
 
 Read test instructions JSON:
 
 ```bash
-Projects/{Client}/TestScripts/approval/{extension_id}_test_instructions.json
+Projects/{client_code}/TestScripts/approval/{extension_id}_test_instructions.json
 ```
 
 **JSON Structure:**
@@ -149,6 +168,57 @@ Projects/{Client}/Temp/evidence/{scenario_id}/
 **This section applies to REGRESSION TESTING with existing TES-070 documents.**
 
 For NET NEW TESTING (generic test scripts without detailed TES-070), use adaptive execution based on scenario objectives.
+
+---
+
+**CRITICAL: Use TES-070 Values - Don't Ask User**
+
+When executing regression tests, the TES-070 document contains ALL the values you need:
+- Account numbers
+- Vendor IDs
+- Authority codes
+- Amounts
+- Dates
+- Descriptions
+- Any other field values
+
+**DO NOT ask the user for these values. Use what's in the TES-070 document.**
+
+**ONLY ask the user if:**
+- A value from TES-070 causes an error (e.g., "Account 12345 is invalid")
+- FSM rejects a value (e.g., "Vendor V001 not found")
+- A field is required but not specified in TES-070
+- You encounter an unexpected validation error
+
+**Example - CORRECT:**
+
+TES-070 says: "Create invoice with Vendor V12345, Amount $500.00, Account 6010-100-1000"
+
+Agent does:
+1. Use Vendor = "V12345" (from TES-070)
+2. Use Amount = "$500.00" (from TES-070)
+3. Use Account = "6010-100-1000" (from TES-070)
+4. Execute without asking user
+
+**Example - INCORRECT:**
+
+TES-070 says: "Create invoice with Vendor V12345, Amount $500.00, Account 6010-100-1000"
+
+Agent does:
+1. Ask user: "What vendor should I use?" ❌ WRONG - Use V12345 from TES-070
+2. Ask user: "What amount?" ❌ WRONG - Use $500.00 from TES-070
+3. Ask user: "What account?" ❌ WRONG - Use 6010-100-1000 from TES-070
+
+**Example - CORRECT (Error Handling):**
+
+TES-070 says: "Create invoice with Account 6010-100-1000"
+
+Agent tries to use account, FSM shows error: "Account 6010-100-1000 is invalid"
+
+Agent does:
+1. Take screenshot of error
+2. Ask user: "TES-070 specifies account 6010-100-1000, but FSM says it's invalid. Should I use a different account?"
+3. Wait for user response
 
 ---
 

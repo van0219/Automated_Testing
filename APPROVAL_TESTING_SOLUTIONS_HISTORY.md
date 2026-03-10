@@ -414,7 +414,7 @@ See steering files for detailed workflows:
 ### Status
 
 **Current**: ✅ PROVEN SUCCESSFUL - Power works, MCP tools accessible!  
-**Location**: `powers/fsm-approval-testing/`  
+**Location**: `.kiro/powers/fsm-approval-testing/`  
 **Testing**: In progress - Scenario 3.1 executing successfully
 
 ### Validation Complete ✅
@@ -435,12 +435,12 @@ See steering files for detailed workflows:
 ### Implementation Complete
 
 **Files Created:**
-1. `powers/fsm-approval-testing/POWER.md` - Power metadata and instructions
-2. `powers/fsm-approval-testing/mcp.json` - Playwright MCP server configuration
-3. `powers/fsm-approval-testing/steering/tes070-parsing.md` - TES-070 parsing workflow
-4. `powers/fsm-approval-testing/steering/test-execution.md` - Test execution workflow
-5. `powers/fsm-approval-testing/steering/evidence-collection.md` - Evidence collection workflow
-6. `powers/fsm-approval-testing/README.md` - Installation and usage guide
+1. `.kiro/powers/fsm-approval-testing/POWER.md` - Power metadata and instructions
+2. `.kiro/powers/fsm-approval-testing/mcp.json` - Playwright MCP server configuration
+3. `.kiro/powers/fsm-approval-testing/steering/tes070-parsing.md` - TES-070 parsing workflow
+4. `.kiro/powers/fsm-approval-testing/steering/test-execution.md` - Test execution workflow
+5. `.kiro/powers/fsm-approval-testing/steering/evidence-collection.md` - Evidence collection workflow
+6. `.kiro/powers/fsm-approval-testing/README.md` - Installation and usage guide
 
 **Key Features:**
 - ✅ Dynamic activation via keywords
@@ -455,7 +455,7 @@ See steering files for detailed workflows:
 ```
 1. Open Kiro Powers panel (⚡ icon)
 2. Click "Add power from Local Path"
-3. Select powers/fsm-approval-testing/
+3. Select .kiro/powers/fsm-approval-testing/
 4. Click Install
 ```
 

@@ -1,9 +1,12 @@
 # SONH Project
 
+## Client Information
+- **Client Code:** SONH
+- **Client Name:** State of New Hampshire
+- **Created:** 2026-03-05 09:12:10
+
 ## Overview
 This folder contains all testing artifacts for the SONH FSM implementation.
-
-**Created:** 2026-03-05 09:12:10
 
 ## Tenant Information
 - **Tenant ID:** NMR2N66J9P445R7P_AX4
